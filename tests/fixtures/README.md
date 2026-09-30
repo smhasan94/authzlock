@@ -19,7 +19,19 @@ Keep fixtures minimal: only the routes and views the tests assert on.
 
 Extraction imports the target project in-process and Django can only be set up once per
 process, so tests never import two fixtures into the same interpreter. The `run_extract`
-helper (added in SHA-197) runs extraction in a subprocess with `PYTHONPATH` pointing at the
-fixture directory and `DJANGO_SETTINGS_MODULE` set to `settings`, then returns the parsed
-result. A test names the fixture it wants by directory name, for example
-`run_extract("drf_viewsets")`.
+helper in `tests/harness.py` (also available as a pytest fixture of the same name) runs
+`python -m authzlock._dump` in a subprocess with `PYTHONPATH` pointing at the fixture
+directory and `DJANGO_SETTINGS_MODULE` set to `settings`, then returns the parsed JSON. A test
+names the fixture it wants by directory name, for example `run_extract("drf_viewsets")`.
+
+To simulate a missing optional dependency without a separate environment, pass
+`block_modules`, for example `run_extract("function_views", block_modules=("rest_framework",))`.
+The named modules are made unimportable in the child process before extraction starts.
+
+## Current fixtures
+
+- `function_views`: three plain function views, one public, one under `login_required`, one
+  under `permission_required`.
+- `minimal`: a single view; used to prove fixtures run in separate processes.
+- `broken`: a `settings.py` that raises at import time; used to test error reporting. It is
+  not a complete project.
