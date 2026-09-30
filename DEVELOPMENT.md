@@ -131,7 +131,7 @@ DJANGO_SETTINGS_MODULE=fixture_drf_viewsets.settings PYTHONPATH=tests/fixtures/d
 Exact nox session names are defined in `noxfile.py`; if a command above disagrees with
 `noxfile.py`, the noxfile wins and this file should be updated.
 
-## Rules for AI sessions
+## Working rules
 
 - Do not add requirements beyond `docs/requirements.md` and the Linear tickets. Put ideas in
   the "Later" epic.
