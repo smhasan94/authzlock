@@ -15,7 +15,11 @@ SUPPORTED = [(py, dj) for dj in DJANGOS for py in PYTHONS if (py, dj) not in UNS
 # DRF 3.16 is the first release that supports Django 5.2.
 DRF = "djangorestframework>=3.16"
 
-nox.options.sessions = ["lint", "typecheck", "tests"]
+# The oldest supported DRF gets one cell of its own; it does not support Django 5.x.
+DRF_MIN = "djangorestframework==3.14.*"
+MIN_DRF_DJANGO = "4.2"
+
+nox.options.sessions = ["lint", "typecheck", "tests", "tests_min_drf"]
 nox.options.default_venv_backend = "uv|virtualenv"
 
 
@@ -41,4 +45,14 @@ def tests(session: nox.Session, django: str) -> None:
     session.install("-e", ".[dev]")
     session.install(f"django~={django}.0", DRF)
     session.env["AUTHZLOCK_DJANGO"] = django
+    session.run("pytest", *session.posargs)
+
+
+@nox.session(python="3.12")
+def tests_min_drf(session: nox.Session) -> None:
+    """Run the test suite against the oldest supported DRF on Django 4.2."""
+    session.install("-e", ".[dev]")
+    session.install(f"django~={MIN_DRF_DJANGO}.0", DRF_MIN)
+    session.env["AUTHZLOCK_DJANGO"] = MIN_DRF_DJANGO
+    session.env["AUTHZLOCK_DRF"] = "3.14"
     session.run("pytest", *session.posargs)
