@@ -37,6 +37,7 @@ Ends with: CI green on an empty package that prints its version.
 | SHA-183 | Test harness and nox matrix | 1 | SHA-181 |
 | SHA-184 | CI workflow on pull requests | 1 | SHA-182, SHA-183 |
 | SHA-185 | Release tooling to PyPI | 1 | SHA-184 |
+| SHA-272 | Matrix cell for minimum DRF 3.14 on Django 4.2 (follow-up from the SHA-183 plan) | 1 | SHA-183 |
 
 ## Epic 2: Extraction core (SHA-175)
 
@@ -113,4 +114,4 @@ Not scheduled. Placeholders only; they get the full template when pulled into an
 SHA-181 > SHA-183 > SHA-197 > SHA-200 > SHA-203 > SHA-205 > SHA-207 > SHA-225 > SHA-226 >
 SHA-230 > SHA-231 > SHA-232 > SHA-234. Everything else can run in parallel beside it.
 
-Total MVP estimate (Epics 1 to 6): 41 points across 29 tickets.
+Total MVP estimate (Epics 1 to 6): 42 points across 30 tickets.
