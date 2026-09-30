@@ -67,6 +67,8 @@ exclude = ["/tests", "/docs", "/.github", "/.venv", "/DEVELOPMENT.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+xfail_strict = true
 markers = ["slow: builds packages or creates virtualenvs; takes several seconds"]
 
 [tool.ruff]

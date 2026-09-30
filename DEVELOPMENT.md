@@ -110,7 +110,7 @@ nox -s tests
 Tests, one interpreter and Django version:
 
 ```sh
-nox -s "tests-3.12(django='5.2')"
+nox -s "tests(python='3.12', django='5.2')"
 # or directly in the active venv:
 pytest
 ```
