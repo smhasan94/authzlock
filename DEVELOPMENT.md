@@ -115,6 +115,12 @@ nox -s "tests(python='3.12', django='5.2')"
 pytest
 ```
 
+Tests against the oldest supported DRF (3.14, on Python 3.12 and Django 4.2):
+
+```sh
+nox -s tests_min_drf
+```
+
 Run everything CI runs:
 
 ```sh
