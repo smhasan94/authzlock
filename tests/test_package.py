@@ -4,13 +4,31 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import venv
 import zipfile
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _base_interpreter() -> Path:
+    """The interpreter this environment was created from.
+
+    Creating a venv from inside a venv breaks on some Python builds (the nested copy of the
+    binary cannot find libpython), so the fresh venv is built from the real base interpreter,
+    located through the standard ``home`` key in ``pyvenv.cfg``.
+    """
+    if sys.prefix == sys.base_prefix:
+        return Path(sys.executable)
+    for line in (Path(sys.prefix) / "pyvenv.cfg").read_text(encoding="utf-8").splitlines():
+        key, _, value = line.partition("=")
+        if key.strip() == "home":
+            home = Path(value.strip())
+            for name in ("python3", "python", "python.exe"):
+                if (home / name).exists():
+                    return home / name
+    return Path(sys.executable)
 
 
 @pytest.fixture(scope="session")
@@ -36,7 +54,11 @@ def built_wheel(built_dist: Path) -> Path:
 @pytest.mark.slow
 def test_t1_wheel_installs_in_fresh_venv(built_wheel: Path, tmp_path: Path) -> None:
     venv_dir = tmp_path / "venv"
-    venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
+    subprocess.run(
+        [str(_base_interpreter()), "-m", "venv", "--clear", str(venv_dir)],
+        check=True,
+        capture_output=True,
+    )
     python = venv_dir / ("Scripts" if sys.platform == "win32" else "bin") / "python"
 
     install = subprocess.run(
