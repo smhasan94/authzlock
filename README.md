@@ -21,6 +21,15 @@ pip install authzlock  # not yet published
 See `DEVELOPMENT.md` for the development commands and `docs/requirements.md` for the full
 requirements. The backlog lives in Linear and is mirrored in `docs/backlog.md`.
 
+## CI
+
+Every pull request and every push to `main` runs the GitHub Actions workflow in
+`.github/workflows/ci.yml`: a `lint` job (ruff), a `typecheck` job (mypy strict) and one
+`tests (python=X, django=Y)` job per supported combination, eleven in all. The jobs are the
+same nox sessions that `nox` runs locally with no arguments. Mark `lint`, `typecheck` and
+every `tests (...)` job as required status checks on `main` in the repository settings so a
+red check blocks merging.
+
 ## License
 
 MIT. See `LICENSE`.
