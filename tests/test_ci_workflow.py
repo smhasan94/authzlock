@@ -1,4 +1,4 @@
-"""CI workflow tests for SHA-184: T4, T5 and two extra static guards."""
+"""CI workflow tests for SHA-184 (T4, T5, two extra guards) and SHA-272 (one extra)."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def _matrix_cells(job: dict[str, Any]) -> set[tuple[str, str]]:
 def test_t4_nox_default_sessions_run_everything_ci_runs(
     noxfile: ModuleType, workflow: dict[str, Any]
 ) -> None:
-    assert noxfile.nox.options.sessions == ["lint", "typecheck", "tests"]
+    assert noxfile.nox.options.sessions == ["lint", "typecheck", "tests", "tests_min_drf"]
     assert set(noxfile.nox.options.sessions) == set(workflow["jobs"])
 
 
@@ -61,3 +61,13 @@ def test_extra_triggers_cover_pull_request_and_main_push(workflow: dict[str, Any
     triggers = workflow[True] if True in workflow else workflow["on"]  # YAML parses `on` as True
     assert "pull_request" in triggers
     assert "main" in triggers["push"]["branches"]
+
+
+def test_extra_ci_has_min_drf_job(workflow: dict[str, Any]) -> None:
+    job = workflow["jobs"]["tests_min_drf"]
+    steps = job["steps"]
+    pythons = [
+        step["with"]["python-version"] for step in steps if "setup-python" in step.get("uses", "")
+    ]
+    assert pythons == ["3.12"]
+    assert any(step.get("run") == "nox -s tests_min_drf" for step in steps)

@@ -1,4 +1,4 @@
-"""nox matrix tests for SHA-183: T2, T6, T7 and one extra check."""
+"""nox matrix tests for SHA-183 (T2, T6, T7) and SHA-272 (T1, T4)."""
 
 from __future__ import annotations
 
@@ -59,3 +59,19 @@ def test_extra_supported_covers_every_django_and_python(noxfile: ModuleType) -> 
     djangos = {dj for _, dj in noxfile.SUPPORTED}
     assert pythons == set(noxfile.PYTHONS)
     assert djangos == set(noxfile.DJANGOS)
+
+
+def test_t1_exactly_one_min_drf_session(noxfile: ModuleType, nox_session_names: list[str]) -> None:
+    assert nox_session_names.count("tests_min_drf") == 1
+    assert noxfile.tests_min_drf.python == "3.12"
+    assert noxfile.MIN_DRF_DJANGO == "4.2"
+    assert noxfile.DRF_MIN == "djangorestframework==3.14.*"
+    # The matrix itself stays at eleven cells on the newest DRF.
+    assert len(noxfile.SUPPORTED) == 11
+    assert noxfile.DRF == "djangorestframework>=3.16"
+
+
+def test_t4_min_drf_never_pairs_with_django_5(noxfile: ModuleType) -> None:
+    assert not noxfile.MIN_DRF_DJANGO.startswith("5")
+    source = (Path(noxfile.__file__)).read_text(encoding="utf-8")
+    assert source.count("DRF_MIN") == 2, "DRF_MIN must be defined once and used once"
