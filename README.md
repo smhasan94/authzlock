@@ -25,10 +25,11 @@ requirements. The backlog lives in Linear and is mirrored in `docs/backlog.md`.
 
 Every pull request and every push to `main` runs the GitHub Actions workflow in
 `.github/workflows/ci.yml`: a `lint` job (ruff), a `typecheck` job (mypy strict) and one
-`tests (python=X, django=Y)` job per supported combination, eleven in all. The jobs are the
-same nox sessions that `nox` runs locally with no arguments. Mark `lint`, `typecheck` and
-every `tests (...)` job as required status checks on `main` in the repository settings so a
-red check blocks merging.
+`tests (python=X, django=Y)` job per supported combination, eleven in all, plus
+`tests (python=3.12, django=4.2, drf=3.14)`, which runs the suite against the oldest
+supported DRF. The jobs are the same nox sessions that `nox` runs locally with no arguments.
+Mark `lint`, `typecheck` and every `tests (...)` job as required status checks on `main` in
+the repository settings so a red check blocks merging.
 
 ## License
 
