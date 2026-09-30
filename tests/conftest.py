@@ -7,8 +7,11 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
+
+from harness import run_extract as _run_extract
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -48,3 +51,9 @@ def nox_session_names(repo_root: Path) -> list[str]:
         [str(nox), "-l", "--json"], cwd=repo_root, capture_output=True, text=True, check=True
     )
     return [entry["session"] for entry in json.loads(result.stdout)]
+
+
+@pytest.fixture(scope="session")
+def run_extract() -> Callable[..., dict[str, Any]]:
+    """`harness.run_extract`: extract a fixture project's inventory in a subprocess."""
+    return _run_extract
