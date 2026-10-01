@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import Iterable, Mapping
@@ -84,3 +85,70 @@ def run_cli(
         text=True,
         check=False,
     )
+
+
+# Git settings for temporary test repositories: no user or system config (so no signing or
+# hooks), a fixed identity, and none of the variables a calling git hook may have set.
+GIT_ENV: dict[str, str | None] = {
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_AUTHOR_NAME": "authzlock tests",
+    "GIT_AUTHOR_EMAIL": "tests@authzlock.invalid",
+    "GIT_COMMITTER_NAME": "authzlock tests",
+    "GIT_COMMITTER_EMAIL": "tests@authzlock.invalid",
+    "GIT_DIR": None,
+    "GIT_WORK_TREE": None,
+    "GIT_INDEX_FILE": None,
+}
+
+
+def git(repo: Path, *args: str) -> str:
+    """Run `git <args>` in `repo` with `GIT_ENV` and return stdout; fail on a non-zero exit."""
+    env = dict(os.environ)
+    for key, value in GIT_ENV.items():
+        if value is None:
+            env.pop(key, None)
+        else:
+            env[key] = value
+    result = subprocess.run(
+        ["git", *args], cwd=repo, env=env, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        raise AssertionError(f"git {' '.join(args)} exited {result.returncode}\n{result.stderr}")
+    return result.stdout
+
+
+def init_repo(repo: Path) -> Path:
+    """Create a git repository at `repo` with one empty commit and return its path."""
+    repo.mkdir(parents=True, exist_ok=True)
+    git(repo, "init", "--quiet")
+    git(repo, "commit", "--quiet", "--allow-empty", "--message", "empty")
+    return repo
+
+
+def project_env(repo: Path) -> dict[str, str | None]:
+    """`run_cli` environment that makes the project copied into `repo` the Django project."""
+    return {**GIT_ENV, "PYTHONPATH": str(repo), "DJANGO_SETTINGS_MODULE": "settings"}
+
+
+def make_repo(fixture: str, tmp_path: Path, *, lockfile: str | None = "authz.lock") -> Path:
+    """Copy `fixture` into a new git repository under `tmp_path` and commit it.
+
+    With `lockfile`, `authzlock update --lockfile <lockfile>` runs first, so the commit holds
+    a lockfile that matches the code; with None the commit has no lockfile. Golden files and
+    bytecode are not copied. Returns the repository root, which is also the project root.
+    """
+    source = FIXTURES / fixture
+    if not source.is_dir():
+        raise ValueError(f"no fixture project named {fixture!r} in {FIXTURES}")
+    repo = tmp_path / "repo"
+    shutil.copytree(source, repo, ignore=shutil.ignore_patterns("*.expected", "__pycache__"))
+    (repo / ".gitignore").write_text("__pycache__/\n", encoding="utf-8")
+    git(repo, "init", "--quiet")
+    if lockfile is not None:
+        result = run_cli(["update", "--lockfile", lockfile], cwd=repo, env=project_env(repo))
+        if result.returncode != 0:
+            raise AssertionError(f"authzlock update exited {result.returncode}\n{result.stderr}")
+    git(repo, "add", "--all")
+    git(repo, "commit", "--quiet", "--message", f"{fixture} fixture")
+    return repo
