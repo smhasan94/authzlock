@@ -21,11 +21,19 @@ def routes() -> dict[str, dict[str, Any]]:
 
 
 def test_t1_no_override_all_false_and_null(routes: dict[str, dict[str, Any]]) -> None:
-    assert routes["scoped/plain/"]["object_scoping"] == {
+    untouched = {
         "get_object": NOT_OVERRIDDEN,
         "get_queryset": NOT_OVERRIDDEN,
         "perform_create": NOT_OVERRIDDEN,
     }
+    assert routes["scoped/plain/"]["object_scoping"] == untouched
+    lines = [
+        route
+        for route in run_extract("drf_viewsets")["routes"]
+        if route["view"] == "billing.views.LineViewSet"
+    ]
+    assert lines
+    assert all(route["object_scoping"] == untouched for route in lines)
 
 
 def test_t2_owner_filter_references_request_user(routes: dict[str, dict[str, Any]]) -> None:
