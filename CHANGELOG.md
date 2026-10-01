@@ -21,3 +21,9 @@ All notable changes to authzlock are recorded here. The format follows
 - GitHub Action (`smhasan94/authzlock@v1`): runs `authzlock diff` on a pull request, keeps one
   comment with the changes up to date across pushes, and fails the job when a route is
   loosened (`fail-on-loosened`, default true). See `docs/github-action.md`.
+
+### Fixed
+
+- The `authzlock` command now finds the project's settings module when run from the project
+  root without `PYTHONPATH`: the current directory is put first on the import path, as
+  `manage.py` and `python -m authzlock` do.
