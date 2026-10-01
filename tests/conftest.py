@@ -23,6 +23,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Rewrite the golden lockfiles in tests/fixtures instead of comparing with them.",
     )
+    parser.addoption(
+        "--update-docs",
+        action="store_true",
+        default=False,
+        help="Rewrite the generated output blocks in docs/scenario.md instead of comparing.",
+    )
 
 
 @pytest.fixture(scope="session")
