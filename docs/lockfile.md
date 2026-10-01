@@ -149,3 +149,32 @@ Diffs, `used_by` lists and command output identify a route by its key:
   `unknown_decorators`, `used_by`) is sorted, and mapping keys inside `actions`,
   `django_auth` and `object_scoping` are sorted, so the same project always produces the
   same bytes.
+
+## What is guaranteed to be stable
+
+For the same project source and the same installed Django and DRF versions, `authzlock
+update` writes byte-identical output regardless of:
+
+- the run: repeated runs, under any `PYTHONHASHSEED`, give the same bytes;
+- the working directory `authzlock` runs from, and the order of entries on `sys.path` or
+  `PYTHONPATH`;
+- where the project is checked out: two clones at different absolute locations give the
+  same bytes;
+- the machine and operating system user;
+- the Python version, from 3.10 to 3.13.
+
+The lockfile never contains an absolute file path, a date or time, a hostname or the
+authzlock version. Views and classes are named by dotted path, never by file. If a value
+that would be written as a dotted path looks like an absolute path (it starts with `/`, a
+drive letter such as `C:\` or a `\\` share), `update` fails with an error instead of writing
+it. URL patterns and docstrings are the project's own text and are written as they are.
+
+Not guaranteed: identical output across Django or DRF versions that genuinely build
+different URL patterns. For example, DRF 3.14's `DefaultRouter` writes its API root and
+format-suffix routes as regexes (`^$`, `^\.(?P<format>[a-z0-9]+)/?$`) where DRF 3.15 and
+later write `''` and `<drf_format_suffix:format>`. Upgrading such a dependency can change
+the lockfile; regenerate it with `authzlock update` and review the change like any other.
+
+The test suite enforces this: it compares bytes across hash seeds, working directories and
+checkout locations, and every CI cell (each supported Python, Django and DRF combination)
+compares the lockfiles of the fixture projects with committed golden files.

@@ -1,12 +1,14 @@
 """Read and write the authzlock lockfile (schema version 1) as YAML.
 
 The serializer chooses every order: top-level keys, route fields, routes by `(path, view)`,
-custom permissions by dotted path, and every order-free list. The loader validates the
-document and names the offending key path in its errors.
+custom permissions by dotted path, and every order-free list. It refuses to write a value
+that looks like an absolute file path, so nothing specific to one machine reaches the file.
+The loader validates the document and names the offending key path in its errors.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -41,6 +43,11 @@ _ORDER_FREE = frozenset(
         "used_by",
     }
 )
+# A POSIX root, a Windows drive letter or a UNC share at the start of a value.
+_ABSOLUTE_PATH = re.compile(r"/|[A-Za-z]:[\\/]|\\\\")
+# Keys whose values are not dotted paths: a URL pattern may start with "/", and a docstring
+# is the project's own text, the same on every machine.
+_FREE_TEXT = frozenset({"path", "docstring"})
 
 
 class _Dumper(yaml.SafeDumper):
@@ -53,6 +60,7 @@ class _Dumper(yaml.SafeDumper):
 def dump(inventory: Inventory) -> str:
     """The lockfile text for `inventory`."""
     data = inventory.to_dict()
+    _reject_absolute_paths(data)
     routes = sorted(data["routes"], key=lambda route: (route["path"], route["view"]))
     document = {
         "schema_version": data["schema_version"],
@@ -71,6 +79,34 @@ def dump(inventory: Inventory) -> str:
         width=4096,
         line_break="\n",
     )
+
+
+def _reject_absolute_paths(data: Mapping[str, Any]) -> None:
+    """Raise `LockfileError` if a value would tie the lockfile to one checkout location."""
+    for index, route in enumerate(data["routes"]):
+        for key in ROUTE_FIELDS:
+            _check_value(route.get(key), f"routes[{index}].{key}", key)
+    for name, entry in data["custom_permissions"].items():
+        _check_value(name, f"custom_permissions.{name}", "")
+        _check_value(entry, f"custom_permissions.{name}", "")
+
+
+def _check_value(value: Any, where: str, key: str) -> None:
+    if key in _FREE_TEXT:
+        return
+    if isinstance(value, str):
+        if _ABSOLUTE_PATH.match(value):
+            raise LockfileError(
+                f"{where}: refusing to write the absolute path {value!r}; the lockfile must "
+                "not depend on where the project is checked out"
+            )
+    elif isinstance(value, Mapping):
+        for item_key, item in value.items():
+            _check_value(item_key, f"{where}.{item_key}", "")
+            _check_value(item, f"{where}.{item_key}", str(item_key))
+    elif isinstance(value, list | tuple):
+        for position, item in enumerate(value):
+            _check_value(item, f"{where}[{position}]", key)
 
 
 def _normalise(key: str, value: Any) -> Any:
