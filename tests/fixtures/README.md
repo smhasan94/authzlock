@@ -28,6 +28,22 @@ To simulate a missing optional dependency without a separate environment, pass
 `block_modules`, for example `run_extract("function_views", block_modules=("rest_framework",))`.
 The named modules are made unimportable in the child process before extraction starts.
 
+## Golden lockfiles
+
+`class_views`, `drf_apiview`, `drf_viewsets` and `function_views` each hold
+`authz.lock.expected`, the exact bytes `authzlock update` must write for that project.
+`tests/test_determinism.py` (T5) compares with it in every nox cell. Where a Django or DRF
+release genuinely builds different routes, a version-specific file takes precedence:
+`authz.lock.drf-<major.minor>.expected`, then `authz.lock.django-<major.minor>.expected`.
+Today the only one is `drf_viewsets/authz.lock.drf-3.14.expected`, because DRF 3.14's
+`DefaultRouter` writes its root and format-suffix routes as regexes.
+
+After an intended change to extraction or the lockfile format, regenerate them with
+`pytest tests/test_determinism.py -k t5 --update-golden` (and, for a version-specific file,
+the same command inside the matching nox session, for example
+`nox -s tests_min_drf -- tests/test_determinism.py -k t5 --update-golden`), then review the
+diff.
+
 ## Current fixtures
 
 - `drf_apiview`: DRF views with `REST_FRAMEWORK` defaults set (`IsAuthenticatedOrReadOnly`,
