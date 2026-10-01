@@ -27,7 +27,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--update-docs",
         action="store_true",
         default=False,
-        help="Rewrite the generated output blocks in docs/scenario.md instead of comparing.",
+        help="Rewrite the generated output blocks in docs/scenario.md and README.md.",
     )
 
 
