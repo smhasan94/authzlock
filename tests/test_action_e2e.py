@@ -198,7 +198,10 @@ def test_extra_sticky_comment_check_rejects_duplicates_and_stale_bodies() -> Non
     found = check.problems(comments, comment_id=7, expected=[EXPECTED_SUMMARY])
 
     assert any("expected exactly one authzlock comment, found 2" in p for p in found), found
-    assert any(EXPECTED_SUMMARY in p for p in found), found
+    only_stale = check.problems([_comment(7, stale)], comment_id=7, expected=[EXPECTED_SUMMARY])
+    assert only_stale == [f"the comment body does not contain {EXPECTED_SUMMARY!r}"]
+    other_id = check.problems([_comment(8, stale)], comment_id=7, expected=[])
+    assert other_id == ["the authzlock comment is 8, expected 7"]
     assert check.problems([], comment_id=7, expected=[]) == [
         "expected exactly one authzlock comment, found 0"
     ]

@@ -118,3 +118,45 @@ add a step after the action that runs `authzlock check`:
 ```yaml
       - run: python -m authzlock check --settings mysite.settings
 ```
+
+## Testing the action
+
+`.github/workflows/action-e2e.yml` runs this repository's own action (`uses: ./`) on the
+project from [scenario.md](scenario.md). Each job copies `tests/fixtures/scenario_loosen`
+into a new git repository under `$RUNNER_TEMP` with `scripts/ci/prepare_scenario.py`,
+committing the fixture and its golden lockfile as `authz.lock`. That repository has no
+`origin`, so every job passes `base-ref: HEAD`, and `python-version: ""` so the action uses
+the Python the job installed Django and Django REST Framework into. The jobs read the report
+from the action's `report-path` output and check it with `scripts/ci/assert_summary.py`.
+
+On every pull request to `main` three jobs run, none of which posts a comment:
+
+| Job | Scenario | Checks |
+|-----|----------|--------|
+| `loosened` | loosening edit applied, `fail-on-loosened: false` | The summary line is exactly `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown` and the one `loosened` row contains `DELETE` and `billing.views.InvoiceDetailView`; the row is printed in the log. |
+| `clean` | unchanged | The summary line counts nothing and the report says no access-control changes. |
+| `fails-when-loosened` | loosening edit applied, `fail-on-loosened: true` | The action step, run with `continue-on-error`, has the outcome `failure`, and its report counts one loosened route, so the failure came from the gate. |
+
+The fourth job, `sticky-comment`, runs only when the workflow is started by hand. It posts
+a real comment, so it needs a pull request to post on: open one (a draft is enough), then
+run the workflow on `main` with that pull request's number:
+
+```console
+$ gh workflow run action-e2e.yml --ref main -f pr_number=<N>
+$ gh run watch
+```
+
+The job runs the action twice with `comment: false`, first on the unchanged scenario and
+then on the loosened one, and after each run calls the same
+`python -m authzlock._github upsert-comment` command the action's comment step runs: the
+action itself only comments on `pull_request` events, and a manual run is not one. The
+second body ends with the run id. The job then checks that the second upsert updated the
+comment the first one wrote, and with `scripts/ci/check_sticky_comment.py` that the pull
+request has exactly one comment starting with `<!-- authzlock -->`, whose body has the
+loosened summary line and this run's id. Run it a second time against the same pull
+request: the log shows `updated comment <id>` with the same id as the first run, and the
+comment now names the second run. Close the pull request afterwards.
+
+`tests/test_action_e2e.py` runs the prepare and check scripts locally on the same scenario
+and checks the workflow's job definitions, so most mistakes fail `pytest` before they reach
+GitHub.
