@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from authzlock.extract import drf
 from authzlock.extract.methods import methods_for
-from authzlock.extract.urls import RawRoute, view_identity, walk_urlconf
+from authzlock.extract.urls import RawRoute, view_class_of, view_identity, walk_urlconf
 from authzlock.model import Inventory, Route
 
 
@@ -16,10 +17,15 @@ def extract() -> Inventory:
 
 def _route(raw: RawRoute) -> Route:
     methods, actions = methods_for(raw.callback)
+    info = drf.resolve(view_class_of(raw.callback))
     return Route(
         path=raw.path,
         name=raw.name,
         view=view_identity(raw.callback),
         methods=tuple(methods),
         actions=actions,
+        permission_classes=info.permission_classes if info else None,
+        permission_source=info.permission_source if info else None,
+        authentication_classes=info.authentication_classes if info else None,
+        authentication_source=info.authentication_source if info else None,
     )
