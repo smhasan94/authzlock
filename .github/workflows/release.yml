@@ -50,6 +50,17 @@ jobs:
             exit 1
           fi
           echo "Tag $TAG matches the package version $version."
+      - name: Smoke-test the wheel in a fresh environment
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/bin/pip" install --quiet dist/*.whl
+          version=$(basename dist/*.whl | cut -d- -f2)
+          actual=$(PATH="$RUNNER_TEMP/smoke/bin:$PATH" authzlock --version)
+          echo "$actual"
+          if [ "$actual" != "authzlock $version" ]; then
+            echo "::error::authzlock --version printed '$actual', expected 'authzlock $version'."
+            exit 1
+          fi
       - name: Upload the distributions
         uses: actions/upload-artifact@v4
         with:
