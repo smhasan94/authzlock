@@ -30,6 +30,10 @@ The named modules are made unimportable in the child process before extraction s
 
 ## Current fixtures
 
+- `drf_apiview`: DRF views with `REST_FRAMEWORK` defaults set (`IsAuthenticatedOrReadOnly`,
+  `SessionAuthentication`): explicit class attributes, a generic view on the defaults, a
+  custom `IsOwner` class, a base class carrying `permission_classes`, overrides of
+  `get_permissions` and `get_authenticators` that raise if called, and one plain Django view.
 - `function_views`: plain function views (one public, one under `login_required`, one under
   `permission_required`, one wrapped by a decorator without `functools.wraps`, one under
   `require_http_methods(["POST", "PUT"])`, one under `require_GET` plus a `functools.wraps`
