@@ -120,9 +120,14 @@ Keys always appear in this order.
   `login_required`, `permission_required` (sorted permission strings), `user_passes_test`
   (whether a custom test applies; the test is never run), and `unknown_decorators`
   (decorators authzlock saw but could not classify). `null` for DRF views.
-- `object_scoping`: for class-based views with generic object lookups, a map from each
-  object hook (`get_queryset`, `get_object`, `perform_create`) to whether the view
-  overrides it and whether that code reads `request.user`; `null` for other views.
+- `object_scoping`: a heuristic for generic class-based views (DRF `GenericAPIView` and
+  ViewSets, Django's `SingleObjectMixin` and `MultipleObjectMixin`). For each object hook
+  (`get_object`, `get_queryset`, `perform_create`) it records `overridden`, true when the
+  view or one of the project's own base classes or mixins defines the hook (the defaults in
+  DRF and Django do not count), and `references_request_user`, true when the override reads
+  `self.request.user` or `request.user` directly, false when it does not, `null` when the
+  hook is not overridden or its source cannot be read. Calls into helpers are not followed,
+  and the hooks are never run. `null` for every other view.
 
 ## Custom permission keys
 
