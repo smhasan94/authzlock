@@ -24,7 +24,13 @@ from authzlock.model import Inventory, Route
 from harness import FIXTURES, run_cli
 
 # Every fixture that is a complete project; `minimal` adds nothing and `broken` cannot load.
-DETERMINISM_FIXTURES = ("class_views", "drf_apiview", "drf_viewsets", "function_views")
+DETERMINISM_FIXTURES = (
+    "class_views",
+    "drf_apiview",
+    "drf_viewsets",
+    "function_views",
+    "scenario_loosen",
+)
 SEEDS = ("0", "1", "2", "3", "random")
 
 
