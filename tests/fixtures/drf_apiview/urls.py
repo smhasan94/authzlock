@@ -1,7 +1,8 @@
 from api import views
-from django.urls import path
+from django.urls import include, path
 
 urlpatterns = [
+    path("scoped/", include("api.scoping_urls")),
     path("explicit/", views.ExplicitView.as_view(), name="explicit"),
     path("orders/", views.OrderListView.as_view(), name="orders"),
     path("orders/<int:pk>/", views.OrderDetailView.as_view(), name="order-detail"),

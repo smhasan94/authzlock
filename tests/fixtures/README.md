@@ -34,9 +34,12 @@ The named modules are made unimportable in the child process before extraction s
   `SessionAuthentication`): explicit class attributes, a generic view on the defaults, a
   custom `IsOwner` class, a base class carrying `permission_classes`, overrides of
   `get_permissions` and `get_authenticators` that raise if called, one plain Django view,
-  and for the custom permission registry: `IsOwner` on three routes, an undocumented
-  `NoDoc`, an `Exploding` class that raises if instantiated or called, and composed
-  `IsAuthenticated | IsOwner` and `~IsBlocked` permissions.
+  for the custom permission registry: `IsOwner` on three routes, an undocumented `NoDoc`,
+  an `Exploding` class that raises if instantiated or called, and composed
+  `IsAuthenticated | IsOwner` and `~IsBlocked` permissions; and under `scoped/` the
+  object-scoping cases: a `ModelViewSet` with no overrides, an owner-filtered
+  `get_queryset` plus `perform_create`, an unfiltered `get_queryset`, and a view inheriting
+  the project's `OwnedQuerysetMixin` (over an unmanaged `Order` model).
 - `drf_viewsets`: a `ModelViewSet` on a `DefaultRouter` with two `@action`s (one with its own
   `permission_classes`), a `ReadOnlyModelViewSet`, a `drf-nested-routers` child resource,
   and the same ViewSet on a second `SimpleRouter` under `v2/`. No models; nothing is queried.
