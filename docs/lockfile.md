@@ -129,6 +129,9 @@ Keys always appear in this order.
   hook is not overridden or its source cannot be read. Calls into helpers are not followed,
   and the hooks are never run. `null` for every other view.
 
+`dynamic`, `object_scoping`, `django_auth` and composed permissions are read by heuristics;
+[heuristics-and-limits.md](heuristics-and-limits.md) says what each can and cannot tell you.
+
 ## Custom permission keys
 
 - `docstring`: the first paragraph of the class's own docstring, or `null`.

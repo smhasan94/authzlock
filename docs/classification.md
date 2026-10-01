@@ -9,6 +9,8 @@ sides whose fields differ is classified by the rules below as `loosened`, `tight
 A false `loosened` alarm is worse than `changed-unknown`, so the rules are conservative:
 authzlock never guesses what a custom, third-party, composed or `dynamic` permission does.
 When no rule covers a change, the answer is `changed-unknown`.
+[heuristics-and-limits.md](heuristics-and-limits.md) explains what the lockfile cannot see,
+and so what no label can tell you.
 
 ## Ranking tables
 

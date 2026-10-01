@@ -256,6 +256,8 @@ does not follow helper calls and does not show that the query is correct. Decora
 detected by reading the view's source, and ones authzlock cannot classify are listed under
 `unknown_decorators`. A green `check` means the lockfile matches the code, not that the
 rules are right. authzlock runs offline and sends nothing anywhere.
+[docs/heuristics-and-limits.md](docs/heuristics-and-limits.md) covers each heuristic and its
+limits.
 
 ## Compatibility
 
@@ -272,9 +274,13 @@ Django 4.2 does not support Python 3.13.
 
 ## Documentation
 
+[docs/index.md](docs/index.md) lists every page. The main ones:
+
 - [docs/cli.md](docs/cli.md): commands, options, output formats and exit codes.
 - [docs/lockfile.md](docs/lockfile.md): the lockfile format and its stability guarantees.
 - [docs/classification.md](docs/classification.md): the rules R1 to R8.
+- [docs/heuristics-and-limits.md](docs/heuristics-and-limits.md): what the heuristics can
+  and cannot tell you, and what a green `check` does not prove.
 - [docs/scenario.md](docs/scenario.md): a pull request that drops `IsOwner`, end to end.
 - [docs/github-action.md](docs/github-action.md): the GitHub Action.
 - [docs/pre-commit.md](docs/pre-commit.md): the pre-commit hooks.
@@ -282,7 +288,8 @@ Django 4.2 does not support Python 3.13.
 
 ## Development
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the development commands,
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the setup, conventions and how to add a test
+project, [DEVELOPMENT.md](DEVELOPMENT.md) for the project brief and development commands,
 [docs/requirements.md](docs/requirements.md) for the requirements and
 [docs/releasing.md](docs/releasing.md) for the release steps. The backlog lives in Linear and
 is mirrored in [docs/backlog.md](docs/backlog.md). `tests/test_readme.py` runs the quickstart

@@ -1,7 +1,18 @@
 # Command-line reference
 
 authzlock is run as `authzlock <command>`; `python -m authzlock <command>` is equivalent.
-`authzlock --version` prints the version and `authzlock --help` lists the commands.
+There are three commands: [`update`](#authzlock-update), [`check`](#authzlock-check) and
+[`diff`](#authzlock-diff). This page lists every option that `--help` shows;
+`tests/test_docs.py` fails when the two disagree.
+
+## Global options
+
+These go before the command, for example `authzlock --version`.
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--version` | | Print `authzlock <version>` and exit. |
+| `--help` | | List the commands and exit. `authzlock` with no command does the same. |
 
 ## Shared conventions
 
@@ -12,6 +23,7 @@ Every command that reads a project or a lockfile accepts these options:
 | `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable. |
 | `--lockfile PATH` | `authz.lock` | Lockfile path, relative to the current directory. |
 | `--quiet`, `-q` | off | Print nothing on success. Errors are still printed. |
+| `--help` | | Show the command's options and exit. |
 
 The project is loaded in the authzlock process, so its settings module and packages must be
 importable. Run authzlock from the project root, the directory that holds `manage.py`:

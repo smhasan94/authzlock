@@ -46,7 +46,9 @@ project; output is stable across runs and machines; a false "loosened" alarm is 
 a DELETE endpoint produces a PR comment naming the endpoint and calling the change
 "loosened", and `check` fails in CI until the lockfile is updated.
 
-Full requirements: `docs/requirements.md`. Backlog mirror: `docs/backlog.md`.
+Full requirements: `docs/requirements.md`. Backlog mirror: `docs/backlog.md`. Contributor
+guide: `CONTRIBUTING.md`, whose shell commands must stay the same as the ones below
+(`tests/test_docs.py` checks this). Reference docs: `docs/index.md`.
 
 ## Engineering conventions
 
@@ -127,11 +129,30 @@ Run everything CI runs:
 nox
 ```
 
-Run the CLI against a fixture project:
+Run the CLI against a fixture project, here checking it against its golden lockfile (each
+fixture's settings module is `settings`):
 
 ```sh
-DJANGO_SETTINGS_MODULE=fixture_drf_viewsets.settings PYTHONPATH=tests/fixtures/drf_viewsets \
-  authzlock update
+DJANGO_SETTINGS_MODULE=settings PYTHONPATH=tests/fixtures/drf_viewsets \
+  authzlock check --lockfile tests/fixtures/drf_viewsets/authz.lock.expected
+```
+
+Rewrite the golden lockfiles after an intended change to extraction or the lockfile format,
+then review the diff:
+
+```sh
+pytest tests/test_determinism.py -k t5 --update-golden
+```
+
+It rewrites, for each fixture, the most specific golden file that exists for the installed
+Django and DRF. To rewrite a DRF 3.14 file such as
+`drf_viewsets/authz.lock.drf-3.14.expected`, pass the same arguments to the oldest-DRF
+session: `nox -s tests_min_drf -- tests/test_determinism.py -k t5 --update-golden`.
+
+Rewrite the generated output blocks in `docs/scenario.md` and `README.md`:
+
+```sh
+pytest tests/test_scenario.py tests/test_readme.py --update-docs
 ```
 
 Exact nox session names are defined in `noxfile.py`; if a command above disagrees with
