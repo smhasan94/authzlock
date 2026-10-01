@@ -9,7 +9,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.permissions import IsOwner
+from api.permissions import Exploding, IsBlocked, IsOwner, NoDoc
 
 
 class ExplicitView(APIView):
@@ -51,6 +51,34 @@ class TokenView(APIView):
         raise AssertionError("must not be called")
 
     def post(self, request: Request) -> Response:
+        return Response({})
+
+
+class ComposedView(APIView):
+    permission_classes = [IsAuthenticated | IsOwner]
+
+    def get(self, request: Request) -> Response:
+        return Response({})
+
+
+class NegatedView(APIView):
+    permission_classes = [~IsBlocked]
+
+    def get(self, request: Request) -> Response:
+        return Response({})
+
+
+class NotesView(APIView):
+    permission_classes = [IsOwner, NoDoc]
+
+    def get(self, request: Request) -> Response:
+        return Response({})
+
+
+class ExplodingView(APIView):
+    permission_classes = [Exploding]
+
+    def get(self, request: Request) -> Response:
         return Response({})
 
 

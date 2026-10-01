@@ -45,7 +45,8 @@ INVENTORY = Inventory(
     routes=(PLAIN, ROUTE),
     custom_permissions={
         "api.permissions.IsOwner": {
-            "doc": "Only the owner of an object may access it.",
+            "name": "IsOwner",
+            "docstring": "Only the owner of an object may access it.",
             "used_by": ["DELETE,GET orders/<int:pk>/ -> api.views.OrderViewSet"],
         }
     },

@@ -75,8 +75,8 @@ routes:
   object_scoping: null
 custom_permissions:
   api.permissions.IsOwner:
+    docstring: Only the owner of an order may read or delete it.
     name: IsOwner
-    doc: Only the owner of an order may read or delete it.
     used_by:
     - DELETE,GET api/orders/<pk>/ -> api.views.OrderViewSet
 ```
@@ -86,8 +86,9 @@ custom_permissions:
 - `schema_version`: the lockfile format version, currently `1`. authzlock refuses to read
   a lockfile with a newer version and asks you to upgrade.
 - `routes`: one entry per URL pattern, sorted by `path`, then `view`.
-- `custom_permissions`: permission classes that are not part of DRF, keyed by dotted path
-  and sorted by it.
+- `custom_permissions`: permission classes whose module is not `rest_framework.permissions`
+  (third-party classes included), keyed by dotted path and sorted by it. authzlock only
+  inspects them; it never instantiates or calls them.
 
 ## Route keys
 
@@ -103,7 +104,9 @@ Keys always appear in this order.
   `OPTIONS`. A function view with no method restriction has `[any]`.
 - `actions`: for DRF ViewSet routes, a map from method to action name such as
   `GET: list`; `{}` for every other view.
-- `permission_classes`: the effective DRF permission classes as sorted dotted paths, the
+- `permission_classes`: the effective DRF permission classes as sorted dotted paths
+  (composed permissions as expressions such as `(a.IsAuthenticated | b.IsOwner)` or
+  `(~b.IsBlocked)`), the
   string `dynamic` when the view overrides `get_permissions` and authzlock will not guess,
   or `null` for views that are not DRF views.
 - `permission_source`: `view` when the view or one of its base classes sets the classes
@@ -123,8 +126,8 @@ Keys always appear in this order.
 
 ## Custom permission keys
 
+- `docstring`: the first paragraph of the class's own docstring, or `null`.
 - `name`: the class name.
-- `doc`: the first paragraph of the class docstring, or `null`.
 - `used_by`: the route keys of every route that uses the class, sorted.
 
 ## Route key
