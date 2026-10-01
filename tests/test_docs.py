@@ -31,6 +31,7 @@ FENCE = re.compile(r"^[ \t]*```([^\n]*)\n(.*?)^[ \t]*```[ \t]*$", re.DOTALL | re
 INLINE_CODE = re.compile(r"`([^`\n]+)`")
 OPTION = re.compile(r"(?<![\w-])(--?[A-Za-z][\w-]*)")
 HEADING2 = re.compile(r"^## (.+)$", re.MULTILINE)
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)")
 SHELL_INFOS = {"sh", "bash", "shell", "console"}
 
@@ -54,7 +55,9 @@ def help_options() -> dict[str, set[str]]:
         args = [command, "--help"] if command else ["--help"]
         result = runner.invoke(app, args, env={"COLUMNS": "200", "TERMINAL_WIDTH": "200"})
         assert result.exit_code == 0, result.output
-        options[command] = set(OPTION.findall(result.output))
+        # Rich colours the help when it detects CI (FORCE_COLOR, GITHUB_ACTIONS); drop the
+        # escape codes so option names are matched the same everywhere.
+        options[command] = set(OPTION.findall(ANSI.sub("", result.output)))
     return options
 
 
