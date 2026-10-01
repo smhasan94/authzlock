@@ -17,3 +17,7 @@ class ProjectLoadError(AuthzlockError):
 
 class LockfileError(AuthzlockError):
     """The lockfile could not be read or written."""
+
+
+class GitError(AuthzlockError):
+    """A git command needed to read the base lockfile failed."""

@@ -22,7 +22,7 @@ Exit codes:
 |------|---------|
 | 0 | Success. |
 | 1 | The lockfile and the project differ (used by `check` and `diff`). |
-| 2 | Error: the project could not be loaded, or the lockfile could not be read or written. |
+| 2 | Error: the project could not be loaded, the lockfile could not be read or written, or git failed (used by `diff`). |
 
 Errors are printed to stderr as one or two plain lines starting with `authzlock:`. The
 second line says what to do, for example:
@@ -101,3 +101,104 @@ line breaks in double quotes with `\n` escapes.
 - The lockfile is read before the project is loaded and is never written.
 - With `--quiet`, nothing is printed when the lockfile is up to date. A mismatch is always
   printed.
+
+## authzlock diff
+
+Compares the lockfile committed at a git ref with a fresh extraction of the project and
+labels every difference. This is the command the GitHub Action runs on a pull request.
+
+```console
+$ authzlock diff --base origin/main --settings mysite.settings
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--base REF` | required | Git ref (branch, tag or commit) whose committed lockfile is the old side. |
+| `--format text\|markdown` | `text` | Output format. |
+| `--fail-on any\|loosened` | `any` | `any`: exit 1 on any change. `loosened`: exit 1 only when a route is loosened. |
+
+`--settings`, `--lockfile` and `--quiet` work as for the other commands.
+
+The old side is the lockfile as committed at `--base`, read with
+`git show <ref>:<path>`, where the path is the `--lockfile` path made relative to the
+repository root (`git rev-parse --show-toplevel`), so `diff` works from any directory of
+the checkout. The new side is the project as it is in the working tree, extracted fresh;
+the lockfile in the working tree is not read, so a pull request whose lockfile is stale is
+still compared correctly. When the base ref has no lockfile at that path, the base counts
+as empty, every current route is reported as `added`, and the output starts with the note
+`base ref has no authz.lock (<ref>:<path>); every route is reported as added`.
+
+Every route that differs gets one label: `added`, `removed`, `loosened`, `tightened` or
+`changed-unknown`. [classification.md](classification.md) lists the rules R1 to R8 that
+decide between the last three.
+
+### Text output
+
+One line per route, grouped by label in the order loosened, tightened, added, removed,
+changed-unknown, with a blank line between groups. Each line is the label (padded to 15
+characters), the route key `<METHODS> <path> -> <view>`, then the field changes as
+`field: old -> new` separated by `; ` and, for a changed route, the rule and reason in
+parentheses. Added and removed routes show their `permission_classes` and `django_auth`
+instead. Custom permission registry changes follow as `custom-permission added|removed|changed`
+lines. The last line is the summary line.
+
+```text
+loosened        DELETE,GET orders/<int:pk>/ -> api.views.OrderDetailView  permission_classes: [api.permissions.IsOwner] -> [rest_framework.permissions.IsAuthenticated]  (R2: custom class api.permissions.IsOwner replaced by built-in rest_framework.permissions.IsAuthenticated)
+
+tightened       GET explicit/ -> api.views.ExplicitView  permission_classes: [rest_framework.permissions.IsAuthenticated] -> [rest_framework.permissions.IsAdminUser]  (R1: strongest built-in rest_framework.permissions.IsAuthenticated -> rest_framework.permissions.IsAdminUser)
+
+custom-permission changed api.permissions.IsOwner  used_by: [DELETE,GET orders/<int:pk>/ -> api.views.OrderDetailView, GET composed/ -> api.views.ComposedView, GET notes/ -> api.views.NotesView] -> [GET composed/ -> api.views.ComposedView, GET notes/ -> api.views.NotesView]
+
+1 loosened, 1 tightened, 0 added, 0 removed, 0 changed-unknown
+```
+
+When nothing differs, the output is the single line `no changes`.
+
+### Markdown output
+
+Meant for a pull request comment. The first line is the hidden marker `<!-- authzlock -->`,
+which the GitHub Action uses to find and update its own comment. Then come a heading, the
+note when the base has no lockfile, the summary line, a table of the `loosened` and
+`tightened` routes, and one collapsed `<details>` section each for `added`, `removed` and
+`changed-unknown` routes and for custom permission registry changes. Every table has the
+columns Change, Methods, Path, View and Details; Details holds the rule and reason and one
+`field`: `old` → `new` entry per changed field. A `|` inside a value is escaped as `\|`.
+
+```markdown
+<!-- authzlock -->
+### authzlock: access-control changes
+
+1 loosened, 1 tightened, 0 added, 0 removed, 0 changed-unknown
+
+| Change | Methods | Path | View | Details |
+|---|---|---|---|---|
+| loosened | DELETE,GET | `orders/<int:pk>/` | `api.views.OrderDetailView` | `R2: custom class api.permissions.IsOwner replaced by built-in rest_framework.permissions.IsAuthenticated`<br>`permission_classes`: `[api.permissions.IsOwner]` → `[rest_framework.permissions.IsAuthenticated]` |
+| tightened | GET | `explicit/` | `api.views.ExplicitView` | `R1: strongest built-in rest_framework.permissions.IsAuthenticated -> rest_framework.permissions.IsAdminUser`<br>`permission_classes`: `[rest_framework.permissions.IsAuthenticated]` → `[rest_framework.permissions.IsAdminUser]` |
+```
+
+When nothing differs, the summary line has five zeros and is followed by
+`No access-control changes against <ref>.`
+
+### Summary line
+
+Both formats contain exactly one summary line, on a line of its own:
+
+```text
+<n> loosened, <n> tightened, <n> added, <n> removed, <n> changed-unknown
+```
+
+The five counts are always present, in this order, and count routes. Custom permission
+registry changes are not counted. CI scripts may parse this line.
+
+### Exit codes
+
+- 0: no differences, or `--fail-on loosened` and no route is loosened.
+- 1: with `--fail-on any` (the default), anything differs, including a custom permission
+  registry change; with `--fail-on loosened`, at least one route is loosened.
+- 2: error: the current directory is not inside a git repository, the ref does not exist
+  (the message names the ref and includes git's error), the lockfile path is outside the
+  repository, the base lockfile cannot be parsed or has a newer `schema_version`, git is not
+  installed, or the project cannot be loaded.
+
+Git and the base lockfile are read before the project is loaded. With `--quiet`, nothing is
+printed when nothing differs; any difference is always printed.
