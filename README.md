@@ -10,6 +10,7 @@ overrides and decorators. authzlock puts them in one reviewable place.
 
 **Status: pre-alpha.** `authzlock update` writes `authz.lock` and `authzlock check` fails
 when it is out of date; `diff` is not built yet. See `docs/cli.md` for the commands and `docs/lockfile.md` for the file format.
+To run `authzlock check` on every commit, see `docs/pre-commit.md`.
 
 ## Install
 

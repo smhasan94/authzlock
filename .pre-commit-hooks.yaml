@@ -1,0 +1,22 @@
+# Hooks that other repositories can use to keep their authz.lock current.
+# Usage and configuration: docs/pre-commit.md.
+#
+# The entry runs `python -m authzlock` rather than the `authzlock` script so that the
+# repository root, where pre-commit runs hooks, is on sys.path and the project's settings
+# module can be imported without setting PYTHONPATH.
+- id: authzlock-check
+  name: authzlock check
+  description: Fail when authz.lock does not match the Django project's access rules.
+  entry: python -m authzlock check
+  language: python
+  pass_filenames: false
+  always_run: true
+  require_serial: true
+- id: authzlock-update
+  name: authzlock update
+  description: Rewrite authz.lock from the Django project; fails when the file changed.
+  entry: python -m authzlock update
+  language: python
+  pass_filenames: false
+  always_run: true
+  require_serial: true
