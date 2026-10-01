@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from authzlock.extract import decorators, drf
+from authzlock.extract.custom import Registry
 from authzlock.extract.methods import methods_for
 from authzlock.extract.urls import RawRoute, view_class_of, view_identity, walk_urlconf
 from authzlock.model import Inventory, Route
@@ -10,18 +11,24 @@ from authzlock.model import Inventory, Route
 
 def extract() -> Inventory:
     """Return the project's inventory: one route per URL pattern, sorted by path and view."""
-    routes = [_route(raw) for raw in walk_urlconf()]
+    registry = Registry()
+    routes = []
+    for raw in walk_urlconf():
+        route, info = _route(raw)
+        routes.append(route)
+        if info is not None:
+            registry.add(route.key(), info.permission_items)
     routes.sort(key=lambda route: (route.path, route.view))
-    return Inventory(routes=tuple(routes))
+    return Inventory(routes=tuple(routes), custom_permissions=registry.collect())
 
 
-def _route(raw: RawRoute) -> Route:
+def _route(raw: RawRoute) -> tuple[Route, drf.DrfInfo | None]:
     methods, actions = methods_for(raw.callback)
     view_class = view_class_of(raw.callback)
     info = drf.resolve(view_class, getattr(raw.callback, "initkwargs", None))
     # DRF views carry their rules in permission classes, not Django auth decorators.
     django_auth = None if info else decorators.resolve(raw.callback, view_class)
-    return Route(
+    route = Route(
         path=raw.path,
         name=raw.name,
         view=view_identity(raw.callback),
@@ -33,3 +40,4 @@ def _route(raw: RawRoute) -> Route:
         authentication_source=info.authentication_source if info else None,
         django_auth=django_auth.to_dict() if django_auth else None,
     )
+    return route, info
