@@ -1,0 +1,131 @@
+name: authzlock
+description: >-
+  Compare a pull request's access rules with its base branch, post the changes as one
+  pull request comment that is updated on every push, and fail when a route is loosened.
+author: Sharukh Hasan
+branding:
+  icon: lock
+  color: blue
+
+inputs:
+  settings-module:
+    description: Django settings module of the project, for example mysite.settings.
+    required: true
+  lockfile:
+    description: Lockfile path, relative to working-directory.
+    required: false
+    default: authz.lock
+  python-version:
+    description: >-
+      Python version to set up with actions/setup-python. Use the version your project's
+      dependencies were installed with, or an empty string to use the Python already on PATH.
+    required: false
+    default: "3.12"
+  fail-on-loosened:
+    description: Fail the job when at least one route is loosened (true or false).
+    required: false
+    default: "true"
+  comment:
+    description: Post or update the pull request comment (true or false).
+    required: false
+    default: "true"
+  working-directory:
+    description: Directory of the Django project inside the checkout; authzlock runs there.
+    required: false
+    default: "."
+  base-ref:
+    description: >-
+      Git ref to compare with. Empty (the default) means the pull request's base branch,
+      fetched from origin and compared as origin/<base branch>.
+    required: false
+    default: ""
+
+outputs:
+  report-path:
+    description: Path of the markdown report written by authzlock diff.
+    value: ${{ steps.diff.outputs.report-path }}
+  summary:
+    description: The report's summary line, for example "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown".
+    value: ${{ steps.diff.outputs.summary }}
+  loosened:
+    description: Number of loosened routes.
+    value: ${{ steps.diff.outputs.loosened }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      if: inputs.python-version != ''
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install authzlock
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install --disable-pip-version-check --quiet "$ACTION_PATH"
+
+    - name: Fetch the base branch
+      if: inputs.base-ref == ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BASE_BRANCH: ${{ github.base_ref }}
+      run: |
+        if [ -z "$BASE_BRANCH" ]; then
+          echo "::error::authzlock: no base branch; run on pull_request events or set the base-ref input."
+          exit 2
+        fi
+        git fetch --no-tags --depth=1 origin "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}"
+
+    - name: Run authzlock diff
+      id: diff
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BASE_REF: ${{ inputs.base-ref }}
+        BASE_BRANCH: ${{ github.base_ref }}
+        SETTINGS_MODULE: ${{ inputs.settings-module }}
+        LOCKFILE: ${{ inputs.lockfile }}
+      run: |
+        base="${BASE_REF:-origin/${BASE_BRANCH}}"
+        report="${RUNNER_TEMP}/authzlock-diff.md"
+        set +e
+        python -m authzlock diff --base "$base" --format markdown \
+          --settings "$SETTINGS_MODULE" --lockfile "$LOCKFILE" > "$report"
+        status=$?
+        set -e
+        cat "$report"
+        if [ "$status" -ge 2 ]; then
+          echo "::error::authzlock diff failed with exit code $status; see the message above."
+          exit "$status"
+        fi
+        cat "$report" >> "$GITHUB_STEP_SUMMARY"
+        echo "report-path=$report" >> "$GITHUB_OUTPUT"
+        python -m authzlock._github outputs --report "$report"
+
+    - name: Post or update the pull request comment
+      id: comment
+      if: inputs.comment == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPORT: ${{ steps.diff.outputs.report-path }}
+      run: |
+        if [ -z "$PR_NUMBER" ]; then
+          echo "::warning::authzlock: not a pull request event; no comment posted."
+          exit 0
+        fi
+        python -m authzlock._github upsert-comment --repo "$REPOSITORY" --pr "$PR_NUMBER" \
+          --body-file "$REPORT"
+
+    - name: Fail on loosened routes
+      id: gate
+      shell: bash
+      env:
+        FAIL_ON_LOOSENED: ${{ inputs.fail-on-loosened }}
+        REPORT: ${{ steps.diff.outputs.report-path }}
+      run: python -m authzlock._github gate --report "$REPORT" --fail-on-loosened "$FAIL_ON_LOOSENED"

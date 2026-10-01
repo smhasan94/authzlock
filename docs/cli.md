@@ -105,7 +105,8 @@ line breaks in double quotes with `\n` escapes.
 ## authzlock diff
 
 Compares the lockfile committed at a git ref with a fresh extraction of the project and
-labels every difference. This is the command the GitHub Action runs on a pull request.
+labels every difference. This is the command the
+[GitHub Action](github-action.md) runs on a pull request.
 
 ```console
 $ authzlock diff --base origin/main --settings mysite.settings

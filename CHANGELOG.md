@@ -18,3 +18,6 @@ All notable changes to authzlock are recorded here. The format follows
   current project and labels each route `loosened`, `tightened`, `added`, `removed` or
   `changed-unknown`, as text or as markdown for a pull request comment, with
   `--fail-on loosened` to fail only on loosened routes.
+- GitHub Action (`smhasan94/authzlock@v1`): runs `authzlock diff` on a pull request, keeps one
+  comment with the changes up to date across pushes, and fails the job when a route is
+  loosened (`fail-on-loosened`, default true). See `docs/github-action.md`.
