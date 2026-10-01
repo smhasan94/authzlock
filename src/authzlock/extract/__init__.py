@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from authzlock.extract import drf
+from authzlock.extract import decorators, drf
 from authzlock.extract.methods import methods_for
 from authzlock.extract.urls import RawRoute, view_class_of, view_identity, walk_urlconf
 from authzlock.model import Inventory, Route
@@ -17,7 +17,10 @@ def extract() -> Inventory:
 
 def _route(raw: RawRoute) -> Route:
     methods, actions = methods_for(raw.callback)
-    info = drf.resolve(view_class_of(raw.callback))
+    view_class = view_class_of(raw.callback)
+    info = drf.resolve(view_class)
+    # DRF views carry their rules in permission classes, not Django auth decorators.
+    django_auth = None if info else decorators.resolve(raw.callback, view_class)
     return Route(
         path=raw.path,
         name=raw.name,
@@ -28,4 +31,5 @@ def _route(raw: RawRoute) -> Route:
         permission_source=info.permission_source if info else None,
         authentication_classes=info.authentication_classes if info else None,
         authentication_source=info.authentication_source if info else None,
+        django_auth=django_auth.to_dict() if django_auth else None,
     )
