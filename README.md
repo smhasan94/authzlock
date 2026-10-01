@@ -8,7 +8,8 @@ access rules looser. Broken access control is the number one web application ris
 Django the rules are scattered across permission classes, settings defaults, queryset
 overrides and decorators. authzlock puts them in one reviewable place.
 
-**Status: pre-alpha.** Nothing works yet beyond `authzlock --version`.
+**Status: pre-alpha.** `authzlock update` writes `authz.lock`; `check` and `diff` are not
+built yet. See `docs/cli.md` for the commands and `docs/lockfile.md` for the file format.
 
 ## Install
 
