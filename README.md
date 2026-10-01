@@ -37,16 +37,14 @@ repository. Replace `mysite.settings` with your settings module.
 
 ```sh quickstart
 export DJANGO_SETTINGS_MODULE=mysite.settings
-python -m authzlock update
+authzlock update
 git add authz.lock
 git commit -m "Add authz.lock"
-python -m authzlock check
+authzlock check
 ```
 
 `update` writes `authz.lock` and prints how many routes it recorded. `check` prints
-`authz.lock: up to date` and exits 0. `python -m authzlock` puts the current directory on the
-import path, as `manage.py` does; the `authzlock` command does the same work once your
-project is on `PYTHONPATH`.
+`authz.lock: up to date` and exits 0.
 
 Now change an access rule. In the example project used to test this README, an `@action`
 that only admins may call is opened to every signed-in user:
@@ -58,8 +56,8 @@ that only admins may call is opened to every signed-in user:
 ```
 
 ```sh quickstart
-python -m authzlock check  # exits 1
-python -m authzlock diff --base HEAD  # exits 1
+authzlock check  # exits 1
+authzlock diff --base HEAD  # exits 1
 ```
 
 `check` exits 1 and lists the routes whose rules no longer match `authz.lock`. `diff` compares
@@ -81,9 +79,9 @@ loosened        POST v2/^invoices/(?P<pk>[^/.]+)/archive/$ -> billing.views.Invo
 route is loosened. To accept the change, record it and commit it with the code:
 
 ```sh quickstart
-python -m authzlock update
+authzlock update
 git commit -am "Let signed-in users archive invoices"
-python -m authzlock check
+authzlock check
 ```
 
 `check` exits 0 again. In CI, run `check` to make sure `authz.lock` is current, and `diff`

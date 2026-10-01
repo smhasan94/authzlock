@@ -13,8 +13,10 @@ Every command that reads a project or a lockfile accepts these options:
 | `--lockfile PATH` | `authz.lock` | Lockfile path, relative to the current directory. |
 | `--quiet`, `-q` | off | Print nothing on success. Errors are still printed. |
 
-The project is loaded in the authzlock process, so its packages must be importable: run
-authzlock from the project root or put the project on `PYTHONPATH`.
+The project is loaded in the authzlock process, so its settings module and packages must be
+importable. Run authzlock from the project root, the directory that holds `manage.py`:
+authzlock puts the current directory first on the import path, as `manage.py` does. To run
+it from another directory, put the project root on `PYTHONPATH`.
 
 Exit codes:
 
