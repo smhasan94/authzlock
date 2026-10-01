@@ -24,6 +24,8 @@ All notable changes to authzlock are recorded here. The format follows
 
 ### Fixed
 
+- `authzlock` now declares Django 4.2 or newer as a dependency, so `pip install authzlock`
+  followed by `authzlock --version` works in a fresh environment. DRF stays optional.
 - The `authzlock` command now finds the project's settings module when run from the project
   root without `PYTHONPATH`: the current directory is put first on the import path, as
   `manage.py` and `python -m authzlock` do.

@@ -24,7 +24,8 @@ pip install authzlock
 ```
 
 Install it into the same environment as your project, because authzlock imports your
-settings and URL configuration. Before the first release, install from the repository:
+settings and URL configuration. Django 4.2 or newer is installed with it if missing; Django REST
+Framework is optional and only needed if your project uses it. Before the first release, install from the repository:
 
 ```sh
 pip install git+https://github.com/smhasan94/authzlock
