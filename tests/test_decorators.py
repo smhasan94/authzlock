@@ -118,3 +118,10 @@ def test_extra_method_restricting_decorators_are_known(
     function_views: dict[str, dict[str, Any]],
 ) -> None:
     assert function_views["status/"]["django_auth"]["unknown_decorators"] == ["logged"]
+
+
+def test_extra_drf_views_have_no_django_auth() -> None:
+    routes = _routes("drf_apiview")
+    assert routes["explicit/"]["django_auth"] is None
+    assert routes["dynamic/"]["django_auth"] is None
+    assert routes["health/"]["django_auth"] == NONE
