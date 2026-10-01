@@ -61,7 +61,7 @@ def _section(text: str, heading: str) -> str:
 
 
 def _shell_env() -> dict[str, str]:
-    """The reader's shell: no project settings yet, this interpreter's `python` first on PATH."""
+    """The reader's shell: no project settings, this interpreter's `authzlock` first on PATH."""
     env = {k: v for k, v in os.environ.items() if k not in {"DJANGO_SETTINGS_MODULE", "PYTHONPATH"}}
     for key, value in GIT_ENV.items():
         if value is None:
