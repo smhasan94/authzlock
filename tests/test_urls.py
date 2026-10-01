@@ -21,6 +21,8 @@ EXPECTED_PATHS = {
     "members/",
     "reports/staff/",
     "audited/",
+    "orders/",
+    "status/",
     "^archive/(?P<year>[0-9]{4})/$",
     *(f"{prefix}{path}" for prefix in ("shop/", "a/", "b/") for path, _, _ in SHOP_ROUTES),
 }
