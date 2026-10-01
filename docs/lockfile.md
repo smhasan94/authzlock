@@ -107,7 +107,8 @@ Keys always appear in this order.
   string `dynamic` when the view overrides `get_permissions` and authzlock will not guess,
   or `null` for views that are not DRF views.
 - `permission_source`: `view` when the view or one of its base classes sets the classes
-  (or overrides `get_permissions`), `settings-default` when they come from
+  (or overrides `get_permissions`), `action` when an `@action` sets its own
+  `permission_classes`, `settings-default` when they come from
   `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`, `null` for non-DRF views.
 - `authentication_classes`: like `permission_classes`, for authentication, with `dynamic`
   when the view overrides `get_authenticators`.

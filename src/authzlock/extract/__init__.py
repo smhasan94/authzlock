@@ -18,7 +18,7 @@ def extract() -> Inventory:
 def _route(raw: RawRoute) -> Route:
     methods, actions = methods_for(raw.callback)
     view_class = view_class_of(raw.callback)
-    info = drf.resolve(view_class)
+    info = drf.resolve(view_class, getattr(raw.callback, "initkwargs", None))
     # DRF views carry their rules in permission classes, not Django auth decorators.
     django_auth = None if info else decorators.resolve(raw.callback, view_class)
     return Route(
