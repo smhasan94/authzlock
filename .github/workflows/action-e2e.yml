@@ -1,0 +1,215 @@
+name: Action e2e
+
+# Runs the local action (`uses: ./`) on the docs/scenario.md project, copied into a fresh
+# git repository under $RUNNER_TEMP by scripts/ci/prepare_scenario.py. That repository has
+# no remote, so every action step passes `base-ref: HEAD` (the committed fixture and
+# lockfile). See "Testing the action" in docs/github-action.md.
+#
+# On pull requests: `loosened`, `clean` and `fails-when-loosened`, with no comment posted.
+# On manual dispatch: those three plus `sticky-comment`, which posts to the pull request
+# given by `pr_number` twice and checks that it still has exactly one authzlock comment.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request to post the authzlock comment on
+        type: number
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Two manual runs against the same pull request must both finish (T3 dispatches twice).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  EXPECTED_SUMMARY: "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+
+jobs:
+  loosened:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the scenario's dependencies
+        run: python -m pip install --quiet "django~=5.2.0" "djangorestframework>=3.16"
+      - name: Prepare the scenario with the loosening edit
+        run: python scripts/ci/prepare_scenario.py "$RUNNER_TEMP/scenario" --loosen
+      - name: Run the action
+        id: authzlock
+        uses: ./
+        with:
+          settings-module: settings
+          python-version: ""
+          working-directory: ${{ runner.temp }}/scenario
+          base-ref: HEAD
+          fail-on-loosened: "false"
+          comment: "false"
+      - name: Check the report
+        env:
+          REPORT: ${{ steps.authzlock.outputs.report-path }}
+        run: >-
+          python scripts/ci/assert_summary.py "$REPORT"
+          --summary "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+          --row loosened --row-contains DELETE
+          --row-contains billing.views.InvoiceDetailView
+
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the scenario's dependencies
+        run: python -m pip install --quiet "django~=5.2.0" "djangorestframework>=3.16"
+      - name: Prepare the scenario unchanged
+        run: python scripts/ci/prepare_scenario.py "$RUNNER_TEMP/scenario"
+      - name: Run the action
+        id: authzlock
+        uses: ./
+        with:
+          settings-module: settings
+          python-version: ""
+          working-directory: ${{ runner.temp }}/scenario
+          base-ref: HEAD
+          fail-on-loosened: "false"
+          comment: "false"
+      - name: Check the report
+        env:
+          REPORT: ${{ steps.authzlock.outputs.report-path }}
+        run: >-
+          python scripts/ci/assert_summary.py "$REPORT"
+          --summary "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+          --contains "no access-control changes"
+
+  fails-when-loosened:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the scenario's dependencies
+        run: python -m pip install --quiet "django~=5.2.0" "djangorestframework>=3.16"
+      - name: Prepare the scenario with the loosening edit
+        run: python scripts/ci/prepare_scenario.py "$RUNNER_TEMP/scenario" --loosen
+      - name: Run the action, expecting it to fail
+        id: authzlock
+        continue-on-error: true
+        uses: ./
+        with:
+          settings-module: settings
+          python-version: ""
+          working-directory: ${{ runner.temp }}/scenario
+          base-ref: HEAD
+          fail-on-loosened: "true"
+          comment: "false"
+      - name: Check the action failed at the loosened gate
+        env:
+          OUTCOME: ${{ steps.authzlock.outcome }}
+          REPORT: ${{ runner.temp }}/authzlock-diff.md
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "::error::expected the action to fail on the loosened route, outcome was $OUTCOME"
+            exit 1
+          fi
+          # The report was written and counts one loosened route, so the failure came from
+          # the gate and not from an earlier step.
+          python scripts/ci/assert_summary.py "$REPORT" --summary "$EXPECTED_SUMMARY"
+
+  sticky-comment:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the scenario's dependencies
+        run: python -m pip install --quiet "django~=5.2.0" "djangorestframework>=3.16"
+      - name: Prepare the scenario twice, unchanged and loosened
+        run: |
+          python scripts/ci/prepare_scenario.py "$RUNNER_TEMP/clean"
+          python scripts/ci/prepare_scenario.py "$RUNNER_TEMP/loosened" --loosen
+
+      # The action posts comments only on pull_request events, so this job runs it with
+      # comment: false and then calls the same upsert command the action's comment step runs.
+      - name: Run the action on the unchanged scenario
+        id: first
+        uses: ./
+        with:
+          settings-module: settings
+          python-version: ""
+          working-directory: ${{ runner.temp }}/clean
+          base-ref: HEAD
+          fail-on-loosened: "false"
+          comment: "false"
+      - name: Post or update the comment (first)
+        id: first-upsert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REPORT: ${{ steps.first.outputs.report-path }}
+        run: |
+          cp "$REPORT" "$RUNNER_TEMP/first.md"
+          out="$(python -m authzlock._github upsert-comment --repo "$REPO" --pr "$PR_NUMBER" --body-file "$RUNNER_TEMP/first.md")"
+          echo "$out"
+          echo "id=$(printf '%s\n' "$out" | sed -n 's/^authzlock: [a-z]* comment \([0-9]*\) on .*/\1/p')" >> "$GITHUB_OUTPUT"
+
+      - name: Run the action on the loosened scenario
+        id: second
+        uses: ./
+        with:
+          settings-module: settings
+          python-version: ""
+          working-directory: ${{ runner.temp }}/loosened
+          base-ref: HEAD
+          fail-on-loosened: "false"
+          comment: "false"
+      - name: Post or update the comment (second)
+        id: second-upsert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REPORT: ${{ steps.second.outputs.report-path }}
+        run: |
+          body="$RUNNER_TEMP/second.md"
+          cp "$REPORT" "$body"
+          printf '\n_authzlock end-to-end test, run %s attempt %s._\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$body"
+          out="$(python -m authzlock._github upsert-comment --repo "$REPO" --pr "$PR_NUMBER" --body-file "$body")"
+          echo "$out"
+          echo "action=$(printf '%s\n' "$out" | sed -n 's/^authzlock: \([a-z]*\) comment .*/\1/p')" >> "$GITHUB_OUTPUT"
+          echo "id=$(printf '%s\n' "$out" | sed -n 's/^authzlock: [a-z]* comment \([0-9]*\) on .*/\1/p')" >> "$GITHUB_OUTPUT"
+
+      - name: Check the pull request has one updated authzlock comment
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          FIRST_ID: ${{ steps.first-upsert.outputs.id }}
+          SECOND_ID: ${{ steps.second-upsert.outputs.id }}
+          SECOND_ACTION: ${{ steps.second-upsert.outputs.action }}
+        run: |
+          echo "first upsert: comment $FIRST_ID; second upsert: $SECOND_ACTION comment $SECOND_ID"
+          if [ -z "$FIRST_ID" ] || [ "$FIRST_ID" != "$SECOND_ID" ] || [ "$SECOND_ACTION" != "updated" ]; then
+            echo "::error::the second upsert must update the comment the first one wrote"
+            exit 1
+          fi
+          python scripts/ci/check_sticky_comment.py --repo "$REPO" --pr "$PR_NUMBER" \
+            --comment-id "$SECOND_ID" --expect "$EXPECTED_SUMMARY" \
+            --expect "run $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT"
