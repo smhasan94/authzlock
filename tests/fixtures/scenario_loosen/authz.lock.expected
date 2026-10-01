@@ -1,0 +1,33 @@
+schema_version: 1
+routes:
+- path: invoices/<int:pk>/
+  name: invoice-detail
+  view: billing.views.InvoiceDetailView
+  methods:
+  - DELETE
+  - GET
+  actions: {}
+  permission_classes:
+  - billing.permissions.IsOwner
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+custom_permissions:
+  billing.permissions.IsOwner:
+    docstring: Only the owner of an invoice may read or delete it.
+    name: IsOwner
+    used_by:
+    - DELETE,GET invoices/<int:pk>/ -> billing.views.InvoiceDetailView

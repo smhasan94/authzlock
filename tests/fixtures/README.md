@@ -30,7 +30,7 @@ The named modules are made unimportable in the child process before extraction s
 
 ## Golden lockfiles
 
-`class_views`, `drf_apiview`, `drf_viewsets` and `function_views` each hold
+`class_views`, `drf_apiview`, `drf_viewsets`, `function_views` and `scenario_loosen` each hold
 `authz.lock.expected`, the exact bytes `authzlock update` must write for that project.
 `tests/test_determinism.py` (T5) compares with it in every nox cell. Where a Django or DRF
 release genuinely builds different routes, a version-specific file takes precedence:
@@ -42,7 +42,12 @@ After an intended change to extraction or the lockfile format, regenerate them w
 `pytest tests/test_determinism.py -k t5 --update-golden` (and, for a version-specific file,
 the same command inside the matching nox session, for example
 `nox -s tests_min_drf -- tests/test_determinism.py -k t5 --update-golden`), then review the
-diff.
+diff. A new complete fixture is compared only once it is listed in `DETERMINISM_FIXTURES` in
+`tests/test_determinism.py`.
+
+The output blocks in `docs/scenario.md` are generated from `scenario_loosen` the same way:
+`tests/test_scenario.py` (T6) fails when they are stale, and
+`pytest tests/test_scenario.py -k t6 --update-docs` rewrites them.
 
 ## Current fixtures
 
@@ -71,6 +76,12 @@ diff.
   `http_method_names`), a `TemplateView` and a `RedirectView`, and one view per auth form:
   `LoginRequiredMixin`, `method_decorator(login_required, name="dispatch")`,
   `PermissionRequiredMixin` with a string attribute, `UserPassesTestMixin`.
+- `scenario_loosen`: the project of [docs/scenario.md](../../docs/scenario.md), used by
+  `tests/test_scenario.py` and the GitHub Action end-to-end test: one
+  `RetrieveDestroyAPIView` at `invoices/<int:pk>/` (`billing.views.InvoiceDetailView`) with
+  `permission_classes = [IsAuthenticated, IsOwner]`, the documented custom `IsOwner`, and an
+  unused custom `IsTenantAdmin` that a test swaps in. The scenario's edit removes `, IsOwner`
+  from that one line of `billing/views.py`; keep the line as it is.
 - `minimal`: a single view; used to prove fixtures run in separate processes.
 - `broken`: a `settings.py` that raises at import time; used to test error reporting. It is
   not a complete project.

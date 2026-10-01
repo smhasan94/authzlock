@@ -107,6 +107,7 @@ line breaks in double quotes with `\n` escapes.
 Compares the lockfile committed at a git ref with a fresh extraction of the project and
 labels every difference. This is the command the
 [GitHub Action](github-action.md) runs on a pull request.
+[scenario.md](scenario.md) walks through a complete example.
 
 ```console
 $ authzlock diff --base origin/main --settings mysite.settings
