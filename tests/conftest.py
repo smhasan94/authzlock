@@ -16,6 +16,15 @@ from harness import run_extract as _run_extract
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="Rewrite the golden lockfiles in tests/fixtures instead of comparing with them.",
+    )
+
+
 @pytest.fixture(scope="session")
 def repo_root() -> Path:
     return REPO_ROOT
