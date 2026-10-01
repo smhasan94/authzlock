@@ -31,10 +31,14 @@ The named modules are made unimportable in the child process before extraction s
 ## Current fixtures
 
 - `function_views`: plain function views (one public, one under `login_required`, one under
-  `permission_required`, one wrapped by a decorator without `functools.wraps`), a top-level
+  `permission_required`, one wrapped by a decorator without `functools.wraps`, one under
+  `require_http_methods(["POST", "PUT"])`, one under `require_GET` plus a `functools.wraps`
+  decorator), a top-level
   `re_path`, and the `shop` app's URLconf (`app_name = "shop"`, with a class-based view, an
   unnamed route and a nested `re_path`) included three times under the namespaces `shop`,
   `a` and `b`.
+- `class_views`: `View` subclasses with different handler sets (one restricted by
+  `http_method_names`), a `TemplateView` and a `RedirectView`.
 - `minimal`: a single view; used to prove fixtures run in separate processes.
 - `broken`: a `settings.py` that raises at import time; used to test error reporting. It is
   not a complete project.

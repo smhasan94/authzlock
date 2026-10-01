@@ -1,10 +1,12 @@
 """Function and class views for URL walking and access checks."""
 
+import functools
 from collections.abc import Callable
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpRequest, HttpResponse
 from django.views import View
+from django.views.decorators.http import require_GET, require_http_methods
 
 
 def public(request: HttpRequest) -> HttpResponse:
@@ -54,3 +56,24 @@ def audit(view: Callable[[HttpRequest], HttpResponse]) -> Callable[[HttpRequest]
 @audit
 def audited(request: HttpRequest) -> HttpResponse:
     return HttpResponse("audited")
+
+
+@require_http_methods(["POST", "PUT"])
+def update_order(request: HttpRequest) -> HttpResponse:
+    return HttpResponse("updated")
+
+
+def logged(view: Callable[[HttpRequest], HttpResponse]) -> Callable[[HttpRequest], HttpResponse]:
+    """A decorator that keeps the wrapped view reachable through functools.wraps."""
+
+    @functools.wraps(view)
+    def inner(request: HttpRequest) -> HttpResponse:
+        return view(request)
+
+    return inner
+
+
+@logged
+@require_GET
+def status(request: HttpRequest) -> HttpResponse:
+    return HttpResponse("ok")
