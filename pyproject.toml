@@ -47,6 +47,7 @@ dev = [
   "types-PyYAML",
   "django>=4.2",
   "djangorestframework>=3.14",
+  "drf-nested-routers>=0.93",
 ]
 
 [project.scripts]
