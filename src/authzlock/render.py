@@ -1,19 +1,28 @@
-"""Plain-text output for the CLI.
+"""Text and markdown output for the CLI.
 
 `render_check(diff)` is what `authzlock check` prints when the lockfile and the project
 disagree: one group each for added, removed and changed routes, one line per route key,
 `field: old -> new` lines under each changed route, short groups for custom permission
 registry changes, then the hint to run `authzlock update`. Empty groups are left out.
 Lines are never wrapped.
+
+`render_text(report)` and `render_markdown(report)` are what `authzlock diff` prints for a
+`DiffReport` built with `build_report`. Both end with the summary line, the five counts in
+`SUMMARY_LABELS` order, for example `1 loosened, 0 tightened, 2 added, 0 removed,
+0 changed-unknown`, on a line of its own so CI scripts can parse it. The markdown starts
+with `MARKDOWN_MARKER`, a hidden comment the GitHub Action uses to find its own comment.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
+from authzlock.classify import ClassifiedRoute, Label, classify_diff
 from authzlock.diff import Diff, FieldChange
+from authzlock.model import Route
 
 _INDENT = "  "
 
@@ -68,3 +77,221 @@ def format_value(value: Any) -> str:
     if isinstance(value, list | tuple):
         return f"[{', '.join(format_value(item) for item in value)}]"
     return str(value)
+
+
+# authzlock diff -----------------------------------------------------------------------------
+
+# Order of the summary counts and of the groups in both outputs.
+SUMMARY_LABELS: tuple[Label, ...] = (
+    "loosened",
+    "tightened",
+    "added",
+    "removed",
+    "changed-unknown",
+)
+# Labels shown in the open markdown table; the others go in collapsed sections.
+_OPEN_LABELS: frozenset[Label] = frozenset({"loosened", "tightened"})
+MARKDOWN_MARKER = "<!-- authzlock -->"
+NO_CHANGES = "no changes"
+_LABEL_WIDTH = max(len(label) for label in SUMMARY_LABELS)
+
+
+@dataclass(frozen=True, kw_only=True)
+class DiffReport:
+    """A diff against a base ref, classified and ready to render.
+
+    `lockfile` is the repository-relative lockfile path read at `ref`; `base_found` is
+    False when the ref has no lockfile there and every route is reported as added.
+    """
+
+    ref: str
+    lockfile: str
+    base_found: bool
+    diff: Diff
+    entries: tuple[ClassifiedRoute, ...]
+
+    def count(self, label: Label) -> int:
+        return sum(1 for entry in self.entries if entry.classification.label == label)
+
+    def summary(self) -> str:
+        return ", ".join(f"{self.count(label)} {label}" for label in SUMMARY_LABELS)
+
+    def group(self, label: Label) -> list[ClassifiedRoute]:
+        return [entry for entry in self.entries if entry.classification.label == label]
+
+    @property
+    def note(self) -> str | None:
+        if self.base_found:
+            return None
+        return (
+            f"base ref has no authz.lock ({self.ref}:{self.lockfile}); "
+            "every route is reported as added"
+        )
+
+
+def build_report(diff: Diff, *, ref: str, lockfile: str, base_found: bool) -> DiffReport:
+    """Classify `diff` and bundle it with where the base lockfile came from."""
+    return DiffReport(
+        ref=ref,
+        lockfile=lockfile,
+        base_found=base_found,
+        diff=diff,
+        entries=classify_diff(diff),
+    )
+
+
+def _access(route: Route) -> list[str]:
+    """The access fields of an added or removed route, as `field: value` texts."""
+    parts = []
+    if route.permission_classes is not None:
+        parts.append(f"permission_classes: {format_value(route.permission_classes)}")
+    if route.django_auth is not None:
+        parts.append(f"django_auth: {format_value(route.django_auth)}")
+    return parts
+
+
+def _field_texts(entry: ClassifiedRoute) -> list[str]:
+    if entry.change is None:
+        return _access(entry.route)
+    return [
+        f"{fc.field}: {format_value(fc.old)} -> {format_value(fc.new)}"
+        for fc in entry.change.fields
+    ]
+
+
+def _registry_lines(diff: Diff) -> list[tuple[str, str, str]]:
+    """(kind, dotted path, detail) for every custom permission registry change."""
+    rows = [("added", entry.path, "") for entry in diff.custom_permissions_added]
+    rows += [("removed", entry.path, "") for entry in diff.custom_permissions_removed]
+    rows += [
+        (
+            "changed",
+            entry.path,
+            "; ".join(
+                f"{fc.field}: {format_value(fc.old)} -> {format_value(fc.new)}"
+                for fc in entry.fields
+            ),
+        )
+        for entry in diff.custom_permissions_changed
+    ]
+    return rows
+
+
+def render_text(report: DiffReport) -> str:
+    """Plain text: one line per route, grouped by label, then the summary line.
+
+    Each line is `<label> <METHODS> <path> -> <view>  <field changes>`, with the rule and
+    reason in parentheses for changed routes. An empty diff prints `no changes`.
+    """
+    lines: list[str] = []
+    if report.note:
+        lines.extend([f"note: {report.note}", ""])
+    if report.diff.is_empty:
+        return "\n".join([*lines, NO_CHANGES]) + "\n"
+    for label in SUMMARY_LABELS:
+        group = report.group(label)
+        if not group:
+            continue
+        for entry in group:
+            line = f"{label:<{_LABEL_WIDTH}} {entry.key}"
+            details = "; ".join(_field_texts(entry))
+            if details:
+                line += f"  {details}"
+            if entry.change is not None:
+                line += f"  ({entry.classification.reason})"
+            lines.append(line)
+        lines.append("")
+    registry = _registry_lines(report.diff)
+    if registry:
+        for kind, path, detail in registry:
+            lines.append(f"custom-permission {kind} {path}" + (f"  {detail}" if detail else ""))
+        lines.append("")
+    lines.append(report.summary())
+    return "\n".join(lines) + "\n"
+
+
+def _code(value: str) -> str:
+    """`value` as an inline code span that is safe inside a markdown table cell."""
+    value = value.replace("|", "\\|")
+    fence = "``" if "`" in value else "`"
+    pad = " " if fence == "``" else ""
+    return f"{fence}{pad}{value}{pad}{fence}"
+
+
+def _md_field(field: str, old: Any, new: Any) -> str:
+    return f"{_code(field)}: {_code(format_value(old))} → {_code(format_value(new))}"
+
+
+def _md_detail(entry: ClassifiedRoute) -> str:
+    if entry.change is None:
+        parts = [_code(part) for part in _access(entry.route)]
+    else:
+        parts = [_code(entry.classification.reason)]
+        parts += [_md_field(fc.field, fc.old, fc.new) for fc in entry.change.fields]
+    return "<br>".join(parts)
+
+
+_TABLE_HEAD = ["| Change | Methods | Path | View | Details |", "|---|---|---|---|---|"]
+
+
+def _md_rows(entries: Iterable[ClassifiedRoute]) -> list[str]:
+    return [
+        f"| {entry.classification.label} | {','.join(entry.route.methods)} "
+        f"| {_code(entry.route.path)} | {_code(entry.route.view)} | {_md_detail(entry)} |"
+        for entry in entries
+    ]
+
+
+def render_markdown(report: DiffReport) -> str:
+    """Markdown for a pull request comment.
+
+    Layout: the hidden marker, a heading, the optional note, the summary line, a table of
+    loosened and tightened routes, then one collapsed `<details>` section each for added,
+    removed and changed-unknown routes and for custom permission registry changes.
+    """
+    lines = [MARKDOWN_MARKER, "### authzlock: access-control changes", ""]
+    if report.note:
+        lines.extend([f"> **Note:** {report.note}.", ""])
+    lines.extend([report.summary(), ""])
+    if report.diff.is_empty:
+        lines.append(f"No access-control changes against {_code(report.ref)}.")
+        return "\n".join(lines) + "\n"
+    open_entries = [entry for entry in report.entries if entry.classification.label in _OPEN_LABELS]
+    open_entries.sort(key=lambda entry: SUMMARY_LABELS.index(entry.classification.label))
+    if open_entries:
+        lines.extend([*_TABLE_HEAD, *_md_rows(open_entries), ""])
+    for label in SUMMARY_LABELS:
+        group = report.group(label)
+        if label in _OPEN_LABELS or not group:
+            continue
+        noun = "route" if len(group) == 1 else "routes"
+        lines.extend(
+            [
+                f"<details><summary>{len(group)} {label} {noun}</summary>",
+                "",
+                *_TABLE_HEAD,
+                *_md_rows(group),
+                "",
+                "</details>",
+                "",
+            ]
+        )
+    registry = _registry_lines(report.diff)
+    if registry:
+        lines.extend(
+            [
+                f"<details><summary>{len(registry)} custom permission registry "
+                f"{'change' if len(registry) == 1 else 'changes'}</summary>",
+                "",
+                "| Change | Class | Details |",
+                "|---|---|---|",
+                *(
+                    f"| {kind} | {_code(path)} | {_code(detail) if detail else ''} |"
+                    for kind, path, detail in registry
+                ),
+                "",
+                "</details>",
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip("\n") + "\n"

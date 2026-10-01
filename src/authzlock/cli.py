@@ -7,16 +7,17 @@ success line. Errors are one or two plain lines on stderr and exit with code 2.
 
 from __future__ import annotations
 
+from enum import Enum
 from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
 
-from authzlock import __version__, lockfile
+from authzlock import __version__, gitutil, lockfile
 from authzlock.diff import compute as compute_diff
 from authzlock.errors import EXIT_ERROR, EXIT_MISMATCH, AuthzlockError, LockfileError
 from authzlock.model import Inventory
-from authzlock.render import render_check
+from authzlock.render import build_report, render_check, render_markdown, render_text
 
 DEFAULT_LOCKFILE = Path("authz.lock")
 
@@ -168,3 +169,77 @@ def check(
         return
     typer.echo(render_check(diff, lockfile=str(lockfile_path)), nl=False)
     raise typer.Exit(EXIT_MISMATCH)
+
+
+class OutputFormat(str, Enum):
+    text = "text"
+    markdown = "markdown"
+
+
+class FailOn(str, Enum):
+    any = "any"
+    loosened = "loosened"
+
+
+def _base_inventory(ref: str, lockfile_path: Path) -> tuple[Inventory | None, str]:
+    """The lockfile committed at `ref` (None if absent) and its repository-relative path."""
+    cwd = Path.cwd()
+    root = gitutil.repo_root(cwd)
+    relative = gitutil.repo_relative(lockfile_path, cwd=cwd, root=root)
+    text = gitutil.read_at_ref(ref, relative, cwd=cwd)
+    if text is None:
+        return None, relative
+    try:
+        return lockfile.load(text), relative
+    except LockfileError as exc:
+        raise LockfileError(f"{ref}:{relative}: {exc}") from exc
+
+
+@app.command()
+def diff(
+    base: Annotated[
+        str,
+        typer.Option(
+            "--base",
+            metavar="REF",
+            help="Git ref whose committed lockfile is the old side, for example origin/main.",
+            show_default=False,
+        ),
+    ],
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format", help="Output format.", case_sensitive=False),
+    ] = OutputFormat.text,
+    fail_on: Annotated[
+        FailOn,
+        typer.Option(
+            "--fail-on",
+            help="Exit 1 on any change, or only when a route is loosened.",
+            case_sensitive=False,
+        ),
+    ] = FailOn.any,
+    settings: SettingsOption = None,
+    lockfile_path: LockfileOption = DEFAULT_LOCKFILE,
+    quiet: QuietOption = False,
+) -> None:
+    """Compare the lockfile committed at a git ref with the project's current access rules."""
+    try:
+        base_inventory, relative = _base_inventory(base, lockfile_path)
+    except AuthzlockError as exc:
+        _fail(exc)
+    current = _extract_or_exit(settings)
+    report = build_report(
+        compute_diff(base_inventory or Inventory(), current),
+        ref=base,
+        lockfile=relative,
+        base_found=base_inventory is not None,
+    )
+    if not (report.diff.is_empty and quiet):
+        render = render_markdown if output_format is OutputFormat.markdown else render_text
+        typer.echo(render(report), nl=False)
+    if fail_on is FailOn.loosened:
+        failed = report.count("loosened") > 0
+    else:
+        failed = not report.diff.is_empty
+    if failed:
+        raise typer.Exit(EXIT_MISMATCH)
