@@ -13,8 +13,10 @@ from typing import Annotated, NoReturn
 import typer
 
 from authzlock import __version__, lockfile
-from authzlock.errors import EXIT_ERROR, AuthzlockError, LockfileError
+from authzlock.diff import compute as compute_diff
+from authzlock.errors import EXIT_ERROR, EXIT_MISMATCH, AuthzlockError, LockfileError
 from authzlock.model import Inventory
+from authzlock.render import render_check
 
 DEFAULT_LOCKFILE = Path("authz.lock")
 
@@ -91,6 +93,23 @@ def _extract_or_exit(settings: str | None) -> Inventory:
         _fail(exc)
 
 
+def _load_lockfile(path: Path) -> Inventory:
+    """Read and parse the lockfile at `path`; every failure is a `LockfileError`."""
+    if not path.exists():
+        raise LockfileError(
+            f"{path} not found.\nRun `authzlock update` to create it, then commit it."
+        )
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else str(exc)
+        raise LockfileError(f"cannot read {path}: {reason}.") from exc
+    try:
+        return lockfile.load(text)
+    except LockfileError as exc:
+        raise LockfileError(f"{path}: {exc}") from exc
+
+
 def _write_if_changed(path: Path, text: str) -> bool:
     """Write `text` to `path` unless it already holds exactly that; True if written."""
     data = text.encode("utf-8")
@@ -128,3 +147,24 @@ def update(
         typer.echo(f"{lockfile_path}: {count} {noun} written")
     else:
         typer.echo(f"{lockfile_path}: unchanged")
+
+
+@app.command()
+def check(
+    settings: SettingsOption = None,
+    lockfile_path: LockfileOption = DEFAULT_LOCKFILE,
+    quiet: QuietOption = False,
+) -> None:
+    """Compare the project's access rules with the lockfile; exit 1 if they differ."""
+    try:
+        base = _load_lockfile(lockfile_path)
+    except LockfileError as exc:
+        _fail(exc)
+    current = _extract_or_exit(settings)
+    diff = compute_diff(base, current)
+    if diff.is_empty:
+        if not quiet:
+            typer.echo(f"{lockfile_path}: up to date")
+        return
+    typer.echo(render_check(diff, lockfile=str(lockfile_path)), nl=False)
+    raise typer.Exit(EXIT_MISMATCH)

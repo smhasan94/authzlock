@@ -53,3 +53,51 @@ authz.lock: 12 routes written
 
 Run `authzlock update` after changing views, URLs or permission settings, and commit the
 updated `authz.lock` with the change.
+
+## authzlock check
+
+Loads the project, extracts its access rules and compares them with the lockfile. This is
+the command to run in CI and in a pre-commit hook.
+
+```console
+$ authzlock check --settings mysite.settings
+authz.lock: up to date
+```
+
+The comparison is between the parsed lockfile and the fresh extraction, not between file
+bytes, so a lockfile that differs only in YAML formatting (blank lines, quoting, key
+order) passes. Routes are matched by path and view.
+
+When they differ, `check` prints what changed and exits with code 1. Routes the project has
+but the lockfile lacks are listed under `added`, routes only in the lockfile under
+`removed`, and routes whose recorded fields differ under `changed`, with one
+`field: old -> new` line per field (nested fields are dotted, such as
+`object_scoping.get_queryset.overridden`). Changes to the custom permission registry follow
+in their own groups. Empty groups are left out.
+
+```text
+authz.lock is out of date.
+added:
+  GET ^invoices/summary/$ -> billing.views.InvoiceViewSet
+removed:
+  GET ^reports/$ -> billing.views.ReportViewSet
+changed:
+  POST ^invoices/(?P<pk>[^/.]+)/archive/$ -> billing.views.InvoiceViewSet
+    permission_classes: [rest_framework.permissions.AllowAny] -> [rest_framework.permissions.IsAdminUser]
+custom permissions added:
+  billing.permissions.IsOwner
+
+To fix: run `authzlock update` and commit authz.lock.
+```
+
+Each route is shown by its key, `<METHODS> <path> -> <view>`. Values are shown on one line:
+lists as `[a, b]`, mappings as `{key: value}`, a missing value as `null`, and a text with
+line breaks in double quotes with `\n` escapes.
+
+- Exit code 0 when the lockfile is up to date, 1 when it differs from the project, 2 on any
+  error: the lockfile is missing (the message suggests `authzlock update`), it cannot be
+  read or parsed, its `schema_version` is newer than this authzlock supports, or the project
+  cannot be loaded.
+- The lockfile is read before the project is loaded and is never written.
+- With `--quiet`, nothing is printed when the lockfile is up to date. A mismatch is always
+  printed.
