@@ -116,7 +116,7 @@ It does not check that the pull request's own `authz.lock` was updated. To requi
 add a step after the action that runs `authzlock check`:
 
 ```yaml
-      - run: python -m authzlock check --settings mysite.settings
+      - run: authzlock check --settings mysite.settings
 ```
 
 ## Testing the action

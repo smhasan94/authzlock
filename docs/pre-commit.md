@@ -41,10 +41,13 @@ it in one of two ways:
 
 Without either, the hook fails with `No Django settings module given.`
 
-The hooks run `python -m authzlock` from the repository root, so a settings module in the
-repository (such as `mysite/settings.py`) can be imported without setting `PYTHONPATH`. If
-your project lives in a subdirectory, set `PYTHONPATH` to that directory in the environment
-that runs `git commit`.
+pre-commit runs the hooks from the repository root, and authzlock puts the current
+directory first on the import path, as `manage.py` does. A settings module in the
+repository (such as `mysite/settings.py`) can therefore be imported without setting
+`PYTHONPATH`. The hook entry is `python -m authzlock`, which gets the same import path from
+the interpreter; running the `authzlock` command by hand from the repository root behaves
+the same. If your project lives in a subdirectory, set `PYTHONPATH` to that directory in the
+environment that runs `git commit`.
 
 ### Dependencies
 
