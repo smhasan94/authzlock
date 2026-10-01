@@ -34,7 +34,7 @@ The named modules are made unimportable in the child process before extraction s
   `SessionAuthentication`): explicit class attributes, a generic view on the defaults, a
   custom `IsOwner` class, a base class carrying `permission_classes`, overrides of
   `get_permissions` and `get_authenticators` that raise if called, one plain Django view,
-  for the custom permission registry: `IsOwner` on three routes, an undocumented `NoDoc`,
+  and for the custom permission registry: `IsOwner` on three routes, an undocumented `NoDoc`,
   an `Exploding` class that raises if instantiated or called, and composed
   `IsAuthenticated | IsOwner` and `~IsBlocked` permissions; and under `scoped/` the
   object-scoping cases: a `ModelViewSet` with no overrides, an owner-filtered

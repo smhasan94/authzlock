@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from authzlock.extract import decorators, drf
+from authzlock.extract import decorators, drf, scoping
 from authzlock.extract.custom import Registry
 from authzlock.extract.methods import methods_for
 from authzlock.extract.urls import RawRoute, view_class_of, view_identity, walk_urlconf
@@ -39,5 +39,6 @@ def _route(raw: RawRoute) -> tuple[Route, drf.DrfInfo | None]:
         authentication_classes=info.authentication_classes if info else None,
         authentication_source=info.authentication_source if info else None,
         django_auth=django_auth.to_dict() if django_auth else None,
+        object_scoping=scoping.resolve(view_class),
     )
     return route, info
