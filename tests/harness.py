@@ -1,4 +1,4 @@
-"""Run authzlock extraction against a fixture project in a separate process.
+"""Run authzlock extraction or the CLI against a fixture project in a separate process.
 
 Django can only be set up once per process, so every call starts a fresh interpreter with
 `PYTHONPATH` pointing at `tests/fixtures/<fixture>` and `DJANGO_SETTINGS_MODULE=settings`.
@@ -10,7 +10,7 @@ import json
 import os
 import subprocess
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -56,3 +56,31 @@ def run_extract(fixture: str, *, block_modules: Iterable[str] = ()) -> dict[str,
         )
     data: dict[str, Any] = json.loads(result.stdout)
     return data
+
+
+def run_cli(
+    args: Iterable[str],
+    *,
+    cwd: Path,
+    fixture: str | None = None,
+    env: Mapping[str, str | None] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run `python -m authzlock <args>` in `cwd` and return the finished process.
+
+    With `fixture`, the child process gets `fixture_env(fixture)`. `env` entries are applied
+    on top; a value of None removes the variable.
+    """
+    full_env = fixture_env(fixture) if fixture is not None else dict(os.environ)
+    for key, value in (env or {}).items():
+        if value is None:
+            full_env.pop(key, None)
+        else:
+            full_env[key] = value
+    return subprocess.run(
+        [sys.executable, "-m", "authzlock", *args],
+        cwd=cwd,
+        env=full_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
