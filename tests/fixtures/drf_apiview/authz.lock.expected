@@ -1,0 +1,294 @@
+schema_version: 1
+routes:
+- path: composed/
+  name: composed
+  view: api.views.ComposedView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - (rest_framework.permissions.IsAuthenticated | api.permissions.IsOwner)
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: dynamic/
+  name: dynamic
+  view: api.views.DynamicView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: dynamic
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: explicit/
+  name: explicit
+  view: api.views.ExplicitView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: exploding/
+  name: exploding
+  view: api.views.ExplodingView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - api.permissions.Exploding
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: health/
+  name: health
+  view: api.views.health
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: negated/
+  name: negated
+  view: api.views.NegatedView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - (~api.permissions.IsBlocked)
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: notes/
+  name: notes
+  view: api.views.NotesView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - api.permissions.IsOwner
+  - api.permissions.NoDoc
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: orders/
+  name: orders
+  view: api.views.OrderListView
+  methods:
+  - GET
+  - POST
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticatedOrReadOnly
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: orders/<int:pk>/
+  name: order-detail
+  view: api.views.OrderDetailView
+  methods:
+  - DELETE
+  - GET
+  actions: {}
+  permission_classes:
+  - api.permissions.IsOwner
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: scoped/all/
+  name: all
+  view: api.scoping_views.AllOrdersView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticatedOrReadOnly
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: true
+      references_request_user: false
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: scoped/mixin/
+  name: mixin
+  view: api.scoping_views.MixinOrdersView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticatedOrReadOnly
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: true
+      references_request_user: true
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: scoped/owned/
+  name: owned
+  view: api.scoping_views.OwnedOrdersView
+  methods:
+  - GET
+  - POST
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticatedOrReadOnly
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: true
+      references_request_user: true
+    perform_create:
+      overridden: true
+      references_request_user: true
+- path: scoped/plain/
+  name: plain
+  view: api.scoping_views.PlainViewSet
+  methods:
+  - GET
+  actions:
+    GET: list
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticatedOrReadOnly
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: staff/report/
+  name: staff-report
+  view: api.views.StaffReportView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAdminUser
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: token/
+  name: token
+  view: api.views.TokenView
+  methods:
+  - POST
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes: dynamic
+  authentication_source: view
+  django_auth: null
+  object_scoping: null
+custom_permissions:
+  api.permissions.Exploding:
+    docstring: Raises if authzlock ever instantiates or calls it.
+    name: Exploding
+    used_by:
+    - GET exploding/ -> api.views.ExplodingView
+  api.permissions.IsBlocked:
+    docstring: The user is on the block list.
+    name: IsBlocked
+    used_by:
+    - GET negated/ -> api.views.NegatedView
+  api.permissions.IsOwner:
+    docstring: Only the owner of an object may access it.
+    name: IsOwner
+    used_by:
+    - DELETE,GET orders/<int:pk>/ -> api.views.OrderDetailView
+    - GET composed/ -> api.views.ComposedView
+    - GET notes/ -> api.views.NotesView
+  api.permissions.NoDoc:
+    docstring: null
+    name: NoDoc
+    used_by:
+    - GET notes/ -> api.views.NotesView

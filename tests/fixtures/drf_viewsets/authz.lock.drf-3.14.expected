@@ -1,0 +1,495 @@
+schema_version: 1
+routes:
+- path: ^$
+  name: api-root
+  view: rest_framework.routers.APIRootView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: ^\.(?P<format>[a-z0-9]+)/?$
+  name: api-root
+  view: rest_framework.routers.APIRootView
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping: null
+- path: ^customers/$
+  name: customer-list
+  view: billing.views.CustomerViewSet
+  methods:
+  - GET
+  actions:
+    GET: list
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^customers/(?P<pk>[^/.]+)/$
+  name: customer-detail
+  view: billing.views.CustomerViewSet
+  methods:
+  - GET
+  actions:
+    GET: retrieve
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^customers/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$
+  name: customer-detail
+  view: billing.views.CustomerViewSet
+  methods:
+  - GET
+  actions:
+    GET: retrieve
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^customers\.(?P<format>[a-z0-9]+)/?$
+  name: customer-list
+  view: billing.views.CustomerViewSet
+  methods:
+  - GET
+  actions:
+    GET: list
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/$
+  name: invoice-list
+  view: billing.views.InvoiceViewSet
+  methods:
+  - GET
+  - POST
+  actions:
+    GET: list
+    POST: create
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/(?P<invoice_pk>[^/.]+)/lines/$
+  name: invoice-lines-list
+  view: billing.views.LineViewSet
+  methods:
+  - GET
+  - POST
+  actions:
+    GET: list
+    POST: create
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/(?P<invoice_pk>[^/.]+)/lines/(?P<pk>[^/.]+)/$
+  name: invoice-lines-detail
+  view: billing.views.LineViewSet
+  methods:
+  - DELETE
+  - GET
+  - PATCH
+  - PUT
+  actions:
+    DELETE: destroy
+    GET: retrieve
+    PATCH: partial_update
+    PUT: update
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: settings-default
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/(?P<pk>[^/.]+)/$
+  name: invoice-detail
+  view: billing.views.InvoiceViewSet
+  methods:
+  - DELETE
+  - GET
+  - PATCH
+  - PUT
+  actions:
+    DELETE: destroy
+    GET: retrieve
+    PATCH: partial_update
+    PUT: update
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/(?P<pk>[^/.]+)/archive/$
+  name: invoice-archive
+  view: billing.views.InvoiceViewSet
+  methods:
+  - POST
+  actions:
+    POST: archive
+  permission_classes:
+  - rest_framework.permissions.IsAdminUser
+  permission_source: action
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/(?P<pk>[^/.]+)/archive\.(?P<format>[a-z0-9]+)/?$
+  name: invoice-archive
+  view: billing.views.InvoiceViewSet
+  methods:
+  - POST
+  actions:
+    POST: archive
+  permission_classes:
+  - rest_framework.permissions.IsAdminUser
+  permission_source: action
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/(?P<pk>[^/.]+)\.(?P<format>[a-z0-9]+)/?$
+  name: invoice-detail
+  view: billing.views.InvoiceViewSet
+  methods:
+  - DELETE
+  - GET
+  - PATCH
+  - PUT
+  actions:
+    DELETE: destroy
+    GET: retrieve
+    PATCH: partial_update
+    PUT: update
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/summary/$
+  name: invoice-summary
+  view: billing.views.InvoiceViewSet
+  methods:
+  - GET
+  actions:
+    GET: summary
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices/summary\.(?P<format>[a-z0-9]+)/?$
+  name: invoice-summary
+  view: billing.views.InvoiceViewSet
+  methods:
+  - GET
+  actions:
+    GET: summary
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: ^invoices\.(?P<format>[a-z0-9]+)/?$
+  name: invoice-list
+  view: billing.views.InvoiceViewSet
+  methods:
+  - GET
+  - POST
+  actions:
+    GET: list
+    POST: create
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: v2/^invoices/$
+  name: v2-invoice-list
+  view: billing.views.InvoiceViewSet
+  methods:
+  - GET
+  - POST
+  actions:
+    GET: list
+    POST: create
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: v2/^invoices/(?P<pk>[^/.]+)/$
+  name: v2-invoice-detail
+  view: billing.views.InvoiceViewSet
+  methods:
+  - DELETE
+  - GET
+  - PATCH
+  - PUT
+  actions:
+    DELETE: destroy
+    GET: retrieve
+    PATCH: partial_update
+    PUT: update
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: v2/^invoices/(?P<pk>[^/.]+)/archive/$
+  name: v2-invoice-archive
+  view: billing.views.InvoiceViewSet
+  methods:
+  - POST
+  actions:
+    POST: archive
+  permission_classes:
+  - rest_framework.permissions.IsAdminUser
+  permission_source: action
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+- path: v2/^invoices/summary/$
+  name: v2-invoice-summary
+  view: billing.views.InvoiceViewSet
+  methods:
+  - GET
+  actions:
+    GET: summary
+  permission_classes:
+  - rest_framework.permissions.IsAuthenticated
+  permission_source: view
+  authentication_classes:
+  - rest_framework.authentication.SessionAuthentication
+  authentication_source: settings-default
+  django_auth: null
+  object_scoping:
+    get_object:
+      overridden: false
+      references_request_user: null
+    get_queryset:
+      overridden: false
+      references_request_user: null
+    perform_create:
+      overridden: false
+      references_request_user: null
+custom_permissions: {}

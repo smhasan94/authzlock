@@ -1,0 +1,395 @@
+schema_version: 1
+routes:
+- path: ^archive/(?P<year>[0-9]{4})/$
+  name: archive
+  view: shop.views.archive
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: a/
+  name: a:list
+  view: shop.views.product_list
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: a/<int:pk>/
+  name: a:detail
+  view: shop.views.ProductDetail
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: a/^legacy/(?P<sku>[0-9]+)/$
+  name: a:legacy
+  view: shop.views.legacy_product
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: a/export/
+  name: null
+  view: shop.views.export
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: audited/
+  name: audited
+  view: shop.views.audit.<locals>.inner
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: b/
+  name: b:list
+  view: shop.views.product_list
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: b/<int:pk>/
+  name: b:detail
+  view: shop.views.ProductDetail
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: b/^legacy/(?P<sku>[0-9]+)/$
+  name: b:legacy
+  view: shop.views.legacy_product
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: b/export/
+  name: null
+  view: shop.views.export
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: cached/
+  name: cached
+  view: shop.views.cached
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators:
+    - cache_page
+    user_passes_test: false
+  object_scoping: null
+- path: members/
+  name: members-only
+  view: shop.views.members_only
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: true
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: orders/
+  name: orders
+  view: shop.views.update_order
+  methods:
+  - POST
+  - PUT
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: orders/bulk/
+  name: bulk-edit
+  view: shop.views.bulk_edit
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required:
+    - shop.add_order
+    - shop.change_order
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: orders/delete/
+  name: delete-order
+  view: shop.views.delete_order
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required:
+    - shop.delete_order
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: orders/export/
+  name: export-orders
+  view: shop.views.export_orders
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required:
+    - shop.export_order
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: public/
+  name: public
+  view: shop.views.public
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: reports/staff/
+  name: staff-report
+  view: shop.views.staff_report
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required:
+    - shop.view_report
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: shop/
+  name: shop:list
+  view: shop.views.product_list
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: shop/<int:pk>/
+  name: shop:detail
+  view: shop.views.ProductDetail
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: shop/^legacy/(?P<sku>[0-9]+)/$
+  name: shop:legacy
+  view: shop.views.legacy_product
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: shop/export/
+  name: null
+  view: shop.views.export
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: staff/tools/
+  name: staff-tools
+  view: shop.views.staff_tools
+  methods:
+  - any
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: true
+  object_scoping: null
+- path: status/
+  name: status
+  view: shop.views.status
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators:
+    - logged
+    user_passes_test: false
+  object_scoping: null
+custom_permissions: {}

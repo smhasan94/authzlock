@@ -1,0 +1,137 @@
+schema_version: 1
+routes:
+- path: about/
+  name: about
+  view: django.views.generic.base.TemplateView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: account/
+  name: account
+  view: pages.views.AccountView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: true
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: items/
+  name: items
+  view: pages.views.ItemView
+  methods:
+  - GET
+  - POST
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: old/
+  name: old
+  view: django.views.generic.base.RedirectView
+  methods:
+  - DELETE
+  - GET
+  - PATCH
+  - POST
+  - PUT
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: orders/
+  name: orders
+  view: pages.views.OrderAdminView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required:
+    - shop.view_order
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: readonly/
+  name: readonly
+  view: pages.views.ReadOnlyView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: settings/
+  name: settings
+  view: pages.views.SettingsView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: true
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: false
+  object_scoping: null
+- path: staff/
+  name: staff
+  view: pages.views.StaffView
+  methods:
+  - GET
+  actions: {}
+  permission_classes: null
+  permission_source: null
+  authentication_classes: null
+  authentication_source: null
+  django_auth:
+    login_required: false
+    permission_required: []
+    unknown_decorators: []
+    user_passes_test: true
+  object_scoping: null
+custom_permissions: {}
