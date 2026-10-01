@@ -21,7 +21,7 @@ MVP tickets share the design decisions below so that tickets built in parallel f
 | `extract/source.py` | SHA-209 | shared AST helpers: source of a callable or method, decorator list, attribute chains |
 | `_dump.py` | SHA-197 | `python -m authzlock._dump` prints the inventory as JSON; used by the test harness |
 | `lockfile.py` | SHA-224 | `dump`, `load`, schema version 1 |
-| `diff.py` | SHA-226 (first cut), SHA-228 (final) | `compute(base, current) -> Diff` |
+| `diff.py` | SHA-228 | `compute(base, current) -> Diff` |
 | `classify.py` | SHA-229 | rules R1 to R8 |
 | `render.py` | SHA-230 | text and markdown output |
 | `gitutil.py` | SHA-230 | read a file at a git ref |
