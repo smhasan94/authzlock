@@ -34,6 +34,9 @@ The named modules are made unimportable in the child process before extraction s
   `SessionAuthentication`): explicit class attributes, a generic view on the defaults, a
   custom `IsOwner` class, a base class carrying `permission_classes`, overrides of
   `get_permissions` and `get_authenticators` that raise if called, and one plain Django view.
+- `drf_viewsets`: a `ModelViewSet` on a `DefaultRouter` with two `@action`s (one with its own
+  `permission_classes`), a `ReadOnlyModelViewSet`, a `drf-nested-routers` child resource,
+  and the same ViewSet on a second `SimpleRouter` under `v2/`. No models; nothing is queried.
 - `function_views`: plain function views (one public, one under `login_required`, one under
   `permission_required`, one wrapped by a decorator without `functools.wraps`, one under
   `require_http_methods(["POST", "PUT"])`, one under `require_GET` plus a `functools.wraps`

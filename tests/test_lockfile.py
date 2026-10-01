@@ -53,7 +53,7 @@ INVENTORY = Inventory(
 
 
 def test_t1_dump_starts_with_schema_version_and_sorted_routes() -> None:
-    inventory = Inventory.from_dict(run_extract("function_views"))
+    inventory = Inventory.from_dict(run_extract("drf_viewsets"))
     text = dump(inventory)
     assert text.startswith("schema_version: 1\n")
     data = yaml.safe_load(text)
