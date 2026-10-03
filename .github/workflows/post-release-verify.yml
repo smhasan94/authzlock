@@ -60,7 +60,7 @@ jobs:
       - name: Run the README quickstart against the installed package
         run: |
           rm -rf src
-          "$RUNNER_TEMP/venv/bin/pip" install --quiet pytest djangorestframework
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pytest djangorestframework drf-nested-routers
           "$RUNNER_TEMP/venv/bin/python" -c "import authzlock, sys; print(authzlock.__file__); sys.exit('site-packages' not in authzlock.__file__)"
           "$RUNNER_TEMP/venv/bin/python" -m pytest -p no:cacheprovider \
             tests/test_readme.py::test_t1_quickstart_commands_run_as_documented
