@@ -262,16 +262,16 @@ limits.
 
 ## Compatibility
 
-| Python | Django 4.2 | Django 5.1 | Django 5.2 |
-|--------|------------|------------|------------|
-| 3.10 | yes | yes | yes |
-| 3.11 | yes | yes | yes |
-| 3.12 | yes | yes | yes |
-| 3.13 | no | yes | yes |
+| Python | Django 4.2 | Django 5.1 | Django 5.2 | Django 6.0 | Django 6.1 |
+|--------|------------|------------|------------|------------|------------|
+| 3.10 | yes | yes | yes | no | no |
+| 3.11 | yes | yes | yes | no | no |
+| 3.12 | yes | yes | yes | yes | yes |
+| 3.13 | no | yes | yes | yes | yes |
 
 Django REST Framework 3.14 and newer. CI runs every cell above with DRF 3.16 or newer, and
 DRF 3.14 on Django 4.2 with Python 3.12. Routers from `drf-nested-routers` are supported.
-Django 4.2 does not support Python 3.13.
+Django 4.2 does not support Python 3.13, and Django 6.0 and newer need Python 3.12.
 
 ## Documentation
 
