@@ -11,8 +11,8 @@ All notable changes to authzlock are recorded here. The format follows
 - Package skeleton with the `authzlock` command and `authzlock --version`.
 - Loading a Django project from `DJANGO_SETTINGS_MODULE`, with plain error messages when the
   settings module is missing or fails to import.
-- Support for Python 3.10 to 3.13, Django 4.2, 5.1 and 5.2, and Django REST Framework 3.14
-  and newer, tested in CI on every pull request.
+- Support for Python 3.10 to 3.13, Django 4.2, 5.1, 5.2, 6.0 and 6.1, and Django REST
+  Framework 3.14 and newer, tested in CI on every pull request.
 - Release workflow that publishes to PyPI from a version tag using trusted publishing.
 - `authzlock update` writes the project's access rules to `authz.lock`, a sorted YAML file
   with a schema version, and `authzlock check` exits 1 with a readable report when the

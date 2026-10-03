@@ -7,9 +7,15 @@ import nox
 RUFF = "ruff==0.16.9"
 
 PYTHONS = ["3.10", "3.11", "3.12", "3.13"]
-DJANGOS = ["4.2", "5.1", "5.2"]
-# Django 4.2 does not support Python 3.13.
-UNSUPPORTED = {("3.13", "4.2")}
+DJANGOS = ["4.2", "5.1", "5.2", "6.0", "6.1"]
+# Django 4.2 does not support Python 3.13; Django 6.0 and newer need Python 3.12.
+UNSUPPORTED = {
+    ("3.13", "4.2"),
+    ("3.10", "6.0"),
+    ("3.11", "6.0"),
+    ("3.10", "6.1"),
+    ("3.11", "6.1"),
+}
 SUPPORTED = [(py, dj) for dj in DJANGOS for py in PYTHONS if (py, dj) not in UNSUPPORTED]
 
 # DRF 3.16 is the first release that supports Django 5.2.
