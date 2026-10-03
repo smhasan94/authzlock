@@ -27,7 +27,7 @@ def test_t2_session_list_matches_supported_matrix(
     noxfile: ModuleType, nox_session_names: list[str]
 ) -> None:
     expected = {f"tests(python='{py}', django='{dj}')" for py, dj in noxfile.SUPPORTED}
-    assert len(expected) == 11
+    assert len(expected) == 15
     assert _tests_sessions(nox_session_names) == expected
 
 
@@ -66,8 +66,8 @@ def test_t1_exactly_one_min_drf_session(noxfile: ModuleType, nox_session_names: 
     assert noxfile.tests_min_drf.python == "3.12"
     assert noxfile.MIN_DRF_DJANGO == "4.2"
     assert noxfile.DRF_MIN == "djangorestframework==3.14.*"
-    # The matrix itself stays at eleven cells on the newest DRF.
-    assert len(noxfile.SUPPORTED) == 11
+    # The matrix itself stays at fifteen cells on the newest DRF.
+    assert len(noxfile.SUPPORTED) == 15
     assert noxfile.DRF == "djangorestframework>=3.16"
 
 
