@@ -51,7 +51,30 @@ git push origin vX.Y.Z
 This starts the Release workflow, which builds the sdist and wheel, checks the version and
 publishes to PyPI. Watch it under the repository's Actions tab.
 
-### 5. Verify the install
+### 5. Move the v1 tag
+
+Workflows use the GitHub Action as `smhasan94/authzlock@v1`, so `v1` follows the newest 1.x
+release (0.x releases included). Point it at the release commit:
+
+```sh
+git tag -fa v1 -m "authzlock v1 (X.Y.Z)" vX.Y.Z^{commit}
+git push --force origin v1
+```
+
+This is the only tag that is ever force-pushed. The first time, when `v1` does not exist yet,
+`--force` is not needed.
+
+### 6. Create the GitHub release
+
+Create a release for `vX.Y.Z` with the changelog section as its notes:
+
+```sh
+awk '/^## \[X.Y.Z\]/{on=1; next} /^## \[/{on=0} on' CHANGELOG.md > notes.md
+gh release create vX.Y.Z --title vX.Y.Z --notes-file notes.md
+rm notes.md
+```
+
+### 7. Verify the install
 
 In a fresh virtual environment:
 
@@ -60,7 +83,23 @@ pip install authzlock==X.Y.Z
 authzlock --version
 ```
 
-The output must be `authzlock X.Y.Z`.
+The output must be `authzlock X.Y.Z`. Then run the post-release workflow, which does the same
+on Python 3.10 and 3.13, runs the README quickstart against the installed package, checks
+that `v1` points at the release and runs the action through `smhasan94/authzlock@v1`:
+
+```sh
+gh workflow run post-release-verify.yml -f version=X.Y.Z
+```
+
+## A version is published once
+
+PyPI never accepts the same version twice, even after the files are deleted. If something is
+wrong after a release, fix it on `main` and release the next patch version; do not move or
+re-push a `vX.Y.Z` tag. Git refuses to push an existing tag without `--force`
+(`! [rejected] vX.Y.Z -> vX.Y.Z (already exists)`), and if a tag were forced through, the
+Release workflow would fail at the publish step because PyPI rejects files for a version it
+already has (`400 File already exists`). A broken release can be yanked on PyPI, which keeps
+it installable only by exact pin.
 
 ## Dry run to TestPyPI
 

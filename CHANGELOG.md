@@ -6,6 +6,10 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-02
+
+First release.
+
 ### Added
 
 - Package skeleton with the `authzlock` command and `authzlock --version`.
@@ -15,7 +19,7 @@ All notable changes to authzlock are recorded here. The format follows
   Framework 3.14 and newer, tested in CI on every pull request.
 - Release workflow that publishes to PyPI from a version tag using trusted publishing.
 - `authzlock update` writes the project's access rules to `authz.lock`, a sorted YAML file
-  with a schema version, and `authzlock check` exits 1 with a readable report when the
+  with schema version 1, and `authzlock check` exits 1 with a readable report when the
   project and the lockfile differ. See `docs/lockfile.md` and `docs/cli.md`.
 - pre-commit hooks `authzlock-check` and `authzlock-update`. See `docs/pre-commit.md`.
 - `authzlock diff --base <ref>`: compares the lockfile committed at a git ref with the
