@@ -143,6 +143,8 @@ def test_extra_verify_installs_from_pypi_on_310_and_313(verify: dict[str, Any]) 
     assert "authzlock --version" in runs
     # The quickstart test must import the installed package, not the checkout.
     assert "rm -rf src" in runs
+    # The drf_viewsets fixture the quickstart copies imports drf-nested-routers.
+    assert "drf-nested-routers" in runs
     assert "tests/test_readme.py::test_t1_quickstart_commands_run_as_documented" in runs
 
 
