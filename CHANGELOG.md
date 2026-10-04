@@ -6,6 +6,12 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The GitHub Action takes an `app` input for FastAPI apps, and `settings-module` is now
+  optional: with neither set, authzlock reads the project from the job's environment or
+  `[tool.authzlock]`. See `docs/github-action.md`.
+
 ## [0.2.0] - 2026-10-04
 
 ### Added

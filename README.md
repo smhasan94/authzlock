@@ -108,8 +108,8 @@ listed by dotted path under `permission_classes`, with `Security` scopes as
 `OAuth2PasswordBearer`, under `authentication_classes`. A dependency is only a name to
 authzlock, so a changed dependency list is labelled `changed-unknown`; only removing every
 security scheme from a route is `loosened` (rule R10). `gen-tests` supports Django
-lockfiles only, and the GitHub Action below takes a Django settings module only; in a
-FastAPI workflow, run `authzlock diff --base origin/main` as a plain step. [docs/heuristics-and-limits.md](docs/heuristics-and-limits.md#fastapi)
+lockfiles only. The GitHub Action below takes `app: main:app` in place of
+`settings-module`. [docs/heuristics-and-limits.md](docs/heuristics-and-limits.md#fastapi)
 covers what this can and cannot see.
 
 ## The lockfile

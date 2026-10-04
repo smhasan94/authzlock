@@ -11,7 +11,8 @@ with the marker and edits it instead of adding another, so the thread stays clea
 ## Workflow
 
 Save this as `.github/workflows/authzlock.yml` in your Django project and change the
-settings module, Python version and install command to match your project:
+settings module, Python version and install command to match your project. For a FastAPI
+app, see [FastAPI](#fastapi) below:
 
 ```yaml
 name: authzlock
@@ -48,6 +49,23 @@ the version named after the `@`, into that Python.
 The default shallow checkout is enough: the action fetches the base branch itself, one
 commit deep, and reads the base lockfile with `git show`.
 
+### FastAPI
+
+For a FastAPI app, give `app` instead of `settings-module`:
+
+```yaml
+      - uses: smhasan94/authzlock@v1
+        with:
+          app: main:app
+          python-version: "3.12"
+```
+
+When `settings-module` and `app` are both left empty, authzlock reads the project from
+`DJANGO_SETTINGS_MODULE` or `AUTHZLOCK_APP` in the job's environment, or from
+`[tool.authzlock]` in `pyproject.toml` ([cli.md](cli.md#choosing-the-framework)); if
+nothing names a project, the diff step fails with authzlock's message. Setting both inputs
+is an error.
+
 ## Permissions
 
 The action uses only the workflow's `github.token`; it declares no secrets. The job needs
@@ -66,7 +84,8 @@ report is still printed in the job log and the job summary.
 
 | Input | Default | Meaning |
 |-------|---------|---------|
-| `settings-module` | required | Django settings module, for example `mysite.settings`. |
+| `settings-module` | empty | Django settings module, for example `mysite.settings`. Passed as `--settings` when set. |
+| `app` | empty | FastAPI application as `module:attr`, for example `main:app`. Passed as `--app` when set. With both empty, authzlock uses the environment or `[tool.authzlock]`. |
 | `lockfile` | `authz.lock` | Lockfile path, relative to `working-directory`. |
 | `python-version` | `3.12` | Python version for `actions/setup-python`; empty to skip that step. |
 | `fail-on-loosened` | `true` | Fail the job when at least one route is loosened. |

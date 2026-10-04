@@ -241,7 +241,7 @@ def test_extra_workflow_triggers_jobs_and_permissions(workflow: dict[str, Any]) 
     pr_number = triggers["workflow_dispatch"]["inputs"]["pr_number"]
     assert pr_number["required"] is True
     assert workflow["permissions"] == {"contents": "read"}
-    assert set(workflow["jobs"]) == {*AUTOMATIC, "sticky-comment"}
+    assert set(workflow["jobs"]) == {*AUTOMATIC, "fastapi-loosened", "sticky-comment"}
     for name, job in workflow["jobs"].items():
         assert "needs" not in job, f"job {name} must not depend on another job"
 
@@ -317,3 +317,69 @@ def test_extra_run_steps_take_expressions_through_env_only(workflow: dict[str, A
         for step in job["steps"]:
             if "run" in step:
                 assert "${{" not in step["run"], f"{name}: {step.get('name')!r} must use env"
+
+
+# SHA-305: the FastAPI job ------------------------------------------------------------------
+
+FASTAPI_LOOSENED_ARGS = (
+    "--summary",
+    EXPECTED_SUMMARY,
+    "--row",
+    "loosened",
+    "--row-contains",
+    "GET",
+    "--row-contains",
+    "main.token_info",
+)
+
+
+def _prepared_fastapi_report(tmp_path: Path, *flags: str) -> tuple[Path, Any]:
+    repo = tmp_path / "fastapi"
+    prepared = _script(PREPARE, str(repo), "--fastapi", *flags)
+    assert prepared.returncode == 0, prepared.stdout + prepared.stderr
+    result = run_cli(
+        ["diff", "--base", "HEAD", "--format", "markdown", "--app", "main:app"],
+        cwd=repo,
+        env=project_env(repo),
+    )
+    report = tmp_path / "authzlock-diff.md"
+    report.write_text(result.stdout, encoding="utf-8")
+    return report, result
+
+
+def test_sha305_t2_prepared_fastapi_loosened_repo_gives_one_loosened(tmp_path: Path) -> None:
+    pytest.importorskip("fastapi")
+    report, result = _prepared_fastapi_report(tmp_path, "--loosen")
+
+    assert result.returncode == EXIT_MISMATCH, result.stdout + result.stderr
+    checked = _script(ASSERT_SUMMARY, str(report), *FASTAPI_LOOSENED_ARGS)
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+    assert "R10" in report.read_text(encoding="utf-8")
+
+
+def test_sha305_t2_prepared_fastapi_clean_repo_has_no_changes(tmp_path: Path) -> None:
+    pytest.importorskip("fastapi")
+    report, result = _prepared_fastapi_report(tmp_path)
+
+    assert result.returncode == EXIT_OK, result.stdout + result.stderr
+    checked = _script(ASSERT_SUMMARY, str(report), *CLEAN_ARGS)
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+
+
+def test_sha305_t3_fastapi_job_runs_the_local_action_with_app(workflow: dict[str, Any]) -> None:
+    job = workflow["jobs"]["fastapi-loosened"]
+    assert "if" not in job
+    (action,) = _action_steps(job)
+    inputs = action["with"]
+    assert inputs["app"] == "main:app"
+    assert "settings-module" not in inputs
+    assert inputs["base-ref"] == "HEAD"
+    assert inputs["comment"] == "false"
+    assert inputs["python-version"] == ""
+    runs = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "prepare_scenario.py" in runs and "--fastapi --loosen" in runs
+    assert "fastapi" in runs
+    asserts = [s for s in job["steps"] if "scripts/ci/assert_summary.py" in s.get("run", "")]
+    assert len(asserts) == 1
+    assert asserts[0]["env"]["REPORT"] == f"${{{{ steps.{action['id']}.outputs.report-path }}}}"
+    assert all(text in asserts[0]["run"] for text in (EXPECTED_SUMMARY, "main.token_info"))

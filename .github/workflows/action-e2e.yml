@@ -5,7 +5,8 @@ name: Action e2e
 # no remote, so every action step passes `base-ref: HEAD` (the committed fixture and
 # lockfile). See "Testing the action" in docs/github-action.md.
 #
-# On pull requests: `loosened`, `clean` and `fails-when-loosened`, with no comment posted.
+# On pull requests: `loosened`, `clean`, `fails-when-loosened` and `fastapi-loosened` (the
+# fastapi_basic fixture, `prepare_scenario.py --fastapi`), with no comment posted.
 # On manual dispatch: those three plus `sticky-comment`, which posts to the pull request
 # given by `pr_number` twice and checks that it still has exactly one authzlock comment.
 
@@ -126,6 +127,36 @@ jobs:
           # The report was written and counts one loosened route, so the failure came from
           # the gate and not from an earlier step.
           python scripts/ci/assert_summary.py "$REPORT" --summary "$EXPECTED_SUMMARY"
+
+  fastapi-loosened:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the FastAPI fixture's dependencies
+        run: python -m pip install --quiet "fastapi>=0.100"
+      - name: Prepare the FastAPI app with the loosening edit
+        run: python scripts/ci/prepare_scenario.py "$RUNNER_TEMP/fastapi" --fastapi --loosen
+      - name: Run the action
+        id: authzlock
+        uses: ./
+        with:
+          app: main:app
+          python-version: ""
+          working-directory: ${{ runner.temp }}/fastapi
+          base-ref: HEAD
+          fail-on-loosened: "false"
+          comment: "false"
+      - name: Check the report
+        env:
+          REPORT: ${{ steps.authzlock.outputs.report-path }}
+        run: >-
+          python scripts/ci/assert_summary.py "$REPORT"
+          --summary "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
+          --row loosened --row-contains GET
+          --row-contains main.token_info
 
   sticky-comment:
     if: github.event_name == 'workflow_dispatch'
