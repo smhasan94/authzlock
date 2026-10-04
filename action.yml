@@ -9,8 +9,17 @@ branding:
 
 inputs:
   settings-module:
-    description: Django settings module of the project, for example mysite.settings.
-    required: true
+    description: >-
+      Django settings module of the project, for example mysite.settings. Leave empty for a
+      FastAPI app, or to use DJANGO_SETTINGS_MODULE or [tool.authzlock] in pyproject.toml.
+    required: false
+    default: ""
+  app:
+    description: >-
+      FastAPI application as module:attr, for example main:app. Leave empty for a Django
+      project, or to use AUTHZLOCK_APP or [tool.authzlock] in pyproject.toml.
+    required: false
+    default: ""
   lockfile:
     description: Lockfile path, relative to working-directory.
     required: false
@@ -87,13 +96,17 @@ runs:
         BASE_REF: ${{ inputs.base-ref }}
         BASE_BRANCH: ${{ github.base_ref }}
         SETTINGS_MODULE: ${{ inputs.settings-module }}
+        APP: ${{ inputs.app }}
         LOCKFILE: ${{ inputs.lockfile }}
       run: |
         base="${BASE_REF:-origin/${BASE_BRANCH}}"
         report="${RUNNER_TEMP}/authzlock-diff.md"
+        project=()
+        if [ -n "$SETTINGS_MODULE" ]; then project+=(--settings "$SETTINGS_MODULE"); fi
+        if [ -n "$APP" ]; then project+=(--app "$APP"); fi
         set +e
         python -m authzlock diff --base "$base" --format markdown \
-          --settings "$SETTINGS_MODULE" --lockfile "$LOCKFILE" > "$report"
+          "${project[@]}" --lockfile "$LOCKFILE" > "$report"
         status=$?
         set -e
         cat "$report"

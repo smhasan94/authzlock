@@ -5,7 +5,9 @@ These read the files only. Running the action on GitHub is SHA-234's end-to-end 
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +19,8 @@ ACTION = REPO_ROOT / "action.yml"
 DOC = REPO_ROOT / "docs" / "github-action.md"
 
 EXPECTED_INPUTS = {
-    "settings-module": None,
+    "settings-module": "",
+    "app": "",
     "lockfile": "authz.lock",
     "python-version": "3.12",
     "fail-on-loosened": "true",
@@ -57,13 +60,10 @@ def test_t1_action_yml_inputs_defaults_and_no_secrets(
     assert action["runs"]["using"] == "composite"
     inputs = action["inputs"]
     assert set(inputs) == set(EXPECTED_INPUTS)
-    assert inputs["settings-module"]["required"] is True
-    assert "default" not in inputs["settings-module"]
     for name, default in EXPECTED_INPUTS.items():
         assert inputs[name].get("description"), f"input {name} needs a description"
-        if default is not None:
-            assert inputs[name]["required"] is False, name
-            assert str(inputs[name]["default"]) == default, name
+        assert inputs[name]["required"] is False, name
+        assert str(inputs[name]["default"]) == default, name
 
     assert "secrets." not in action_text
     expressions = re.findall(r"\$\{\{(.*?)\}\}", action_text)
@@ -135,3 +135,44 @@ def test_extra_docs_workflow_snippet_uses_declared_inputs(action: dict[str, Any]
         assert f"`{name}`" in text, f"docs/github-action.md does not describe input {name}"
     for name in action["outputs"]:
         assert f"`{name}`" in text, f"docs/github-action.md does not describe output {name}"
+
+
+def _project_args(action: dict[str, Any], settings: str, app: str) -> list[str]:
+    """The project arguments the diff step builds for these input values, by running the
+    step's own lines that build them."""
+    script = _step(action, "diff")["run"]
+    lines = script.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.strip() == "project=()")
+    building = [lines[start]]
+    for line in lines[start + 1 :]:
+        if not line.strip().startswith('if [ -n "$'):
+            break
+        building.append(line)
+    program = "\n".join([*building, 'printf "%s\\n" "${project[@]}"'])
+    result = subprocess.run(
+        ["bash", "-c", program],
+        env={"SETTINGS_MODULE": settings, "APP": app, "PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.split()
+
+
+@pytest.mark.parametrize(
+    ("settings", "app", "expected"),
+    [
+        ("mysite.settings", "", ["--settings", "mysite.settings"]),
+        ("", "main:app", ["--app", "main:app"]),
+        ("", "", []),
+        ("mysite.settings", "main:app", ["--settings", "mysite.settings", "--app", "main:app"]),
+    ],
+)
+def test_sha305_t1_diff_step_passes_only_the_inputs_that_are_set(
+    action: dict[str, Any], settings: str, app: str, expected: list[str]
+) -> None:
+    diff = _step(action, "diff")
+    assert diff["env"]["SETTINGS_MODULE"] == "${{ inputs.settings-module }}"
+    assert diff["env"]["APP"] == "${{ inputs.app }}"
+    assert '"${project[@]}"' in diff["run"]
+    assert _project_args(action, settings, app) == expected

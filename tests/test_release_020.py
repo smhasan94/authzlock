@@ -1,4 +1,4 @@
-"""Tests for the 0.2.0 release: the changelog section and the empty Unreleased section."""
+"""Tests for the 0.2.0 release: the changelog section and the pre-commit revs."""
 
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ def test_changelog_020_section_complete(repo_root: Path) -> None:
     text = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
     assert re.search(r"^## \[0\.2\.0\] - \d{4}-\d{2}-\d{2}$", text, re.M), "no dated 0.2.0"
     assert text.index("## [Unreleased]") < text.index("## [0.2.0]") < text.index("## [0.1.0]")
-    assert _section(text, "[Unreleased]").strip() == ""
 
     released = _section(text, "[0.2.0]")
     for item in (
