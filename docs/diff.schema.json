@@ -30,13 +30,14 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["loosened", "tightened", "added", "removed", "changed_unknown"],
+      "required": ["loosened", "tightened", "added", "removed", "changed_unknown", "equivalent"],
       "properties": {
         "loosened": {"$ref": "#/$defs/count"},
         "tightened": {"$ref": "#/$defs/count"},
         "added": {"$ref": "#/$defs/count"},
         "removed": {"$ref": "#/$defs/count"},
-        "changed_unknown": {"$ref": "#/$defs/count"}
+        "changed_unknown": {"$ref": "#/$defs/count"},
+        "equivalent": {"$ref": "#/$defs/count"}
       }
     },
     "changes": {
@@ -46,7 +47,9 @@
         "additionalProperties": false,
         "required": ["label", "rule", "reason", "route", "fields", "location"],
         "properties": {
-          "label": {"enum": ["loosened", "tightened", "added", "removed", "changed-unknown"]},
+          "label": {
+            "enum": ["loosened", "tightened", "added", "removed", "changed-unknown", "equivalent"]
+          },
           "rule": {
             "oneOf": [{"type": "string", "pattern": "^R[1-9][0-9]*$"}, {"type": "null"}]
           },

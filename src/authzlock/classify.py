@@ -1,7 +1,10 @@
-"""Classification of route changes: loosened, tightened or changed-unknown.
+"""Classification of route changes: loosened, tightened, changed-unknown or equivalent.
 
-Rules R1 to R8 (agreed 2026-09-29, recorded on epic SHA-177) are evaluated in `RULES`
-order and the first rule that returns a `Classification` wins; R8 always matches. Every
+Rules R1 to R8 (agreed 2026-09-29, recorded on epic SHA-177) and R9 (SHA-239) are evaluated
+in `RULES` order and the first rule that returns a `Classification` wins; R8 always matches.
+R9 runs first: for `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly`,
+whose meaning depends on the HTTP method, it classifies each method's effective permissions
+with R1 to R8 and reports the worst result, or `equivalent` when no method changed. Every
 result names its rule and gives a one-line reason that starts with the rule id.
 
 The rules are conservative: a false `loosened` alarm is worse than `changed-unknown`. Only
@@ -15,16 +18,24 @@ loosened or tightened. `docs/classification.md` lists the rules with one example
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from authzlock.diff import Diff, FieldChange, RouteChange
+from authzlock.effective import expand_for, is_expandable
 from authzlock.extract.custom import BUILTIN_MODULE
 from authzlock.extract.decorators import NON_LITERAL
 from authzlock.model import Route
 
-Label = Literal["added", "removed", "loosened", "tightened", "changed-unknown"]
-LABELS: tuple[Label, ...] = ("added", "removed", "loosened", "tightened", "changed-unknown")
+Label = Literal["added", "removed", "loosened", "tightened", "changed-unknown", "equivalent"]
+LABELS: tuple[Label, ...] = (
+    "added",
+    "removed",
+    "loosened",
+    "tightened",
+    "changed-unknown",
+    "equivalent",
+)
 
 DYNAMIC = "dynamic"
 
@@ -338,7 +349,43 @@ def _r8_anything_else(change: RouteChange) -> Classification:
     return Classification("changed-unknown", "R8", f"R8: {detail} ({', '.join(fields)})")
 
 
-RULES: tuple[Rule, ...] = (
+def _r9_per_method(change: RouteChange) -> Classification | None:
+    fc = _only(change, "permission_classes")
+    if fc is None or not isinstance(fc.old, tuple) or not isinstance(fc.new, tuple):
+        return None
+    if not (is_expandable(fc.old) or is_expandable(fc.new)):
+        return None
+    methods = change.current.methods
+    if not methods or "any" in methods:
+        return None
+    results: list[tuple[str, tuple[str, ...], tuple[str, ...], Classification]] = []
+    for method in methods:
+        old, new = expand_for(fc.old, method), expand_for(fc.new, method)
+        if old == new:
+            continue
+        per_method = RouteChange(
+            base=replace(change.base, permission_classes=old, methods=(method,)),
+            current=replace(change.current, permission_classes=new, methods=(method,)),
+            fields=(FieldChange("permission_classes", old, new),),
+        )
+        results.append((method, old, new, classify(per_method, MVP_RULES)))
+    if not results:
+        return Classification(
+            "equivalent",
+            "R9",
+            f"R9: no method's effective permissions changed ({', '.join(methods)})",
+        )
+    # The first method with the most severe label decides; methods are sorted.
+    method, old, new, decided = min(results, key=lambda item: _SEVERITY.index(item[3].label))
+    return Classification(
+        decided.label, "R9", f"R9: {method} {_show(old)} -> {_show(new)} ({decided.reason})"
+    )
+
+
+# Per-method labels from most to least severe, for R9 to pick the route's label.
+_SEVERITY: tuple[Label, ...] = ("loosened", "changed-unknown", "tightened")
+
+MVP_RULES: tuple[Rule, ...] = (
     Rule(
         "R1",
         "Both permission lists hold only ranked built-ins: compare the strongest class.",
@@ -367,4 +414,15 @@ RULES: tuple[Rule, ...] = (
         _r7_methods_gained,
     ),
     Rule("R8", "Anything else: changed-unknown.", _r8_anything_else),
+)
+
+RULES: tuple[Rule, ...] = (
+    Rule(
+        "R9",
+        "IsAuthenticatedOrReadOnly or DjangoModelPermissionsOrAnonReadOnly on either side: "
+        "classify each method's effective permissions with R1 to R8; equivalent when none "
+        "changed.",
+        _r9_per_method,
+    ),
+    *MVP_RULES,
 )

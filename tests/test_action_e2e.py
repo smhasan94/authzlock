@@ -34,8 +34,8 @@ WORKFLOW = REPO_ROOT / ".github" / "workflows" / "action-e2e.yml"
 SAMPLE = REPO_ROOT / "tests" / "data" / "action-report-loosened.md"
 SCENARIO_DOC = REPO_ROOT / "docs" / "scenario.md"
 
-EXPECTED_SUMMARY = "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
-CLEAN_SUMMARY = "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+EXPECTED_SUMMARY = "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
+CLEAN_SUMMARY = "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
 VIEW = "billing.views.InvoiceDetailView"
 LOOSENED_ARGS = (
     "--summary",
@@ -86,6 +86,16 @@ def test_t4_summary_parser_accepts_expected_and_rejects_other(tmp_path: Path) ->
     assert bad.returncode == 1, bad.stdout + bad.stderr
     assert "2 loosened, 0 tightened" in bad.stderr
     assert EXPECTED_SUMMARY in bad.stderr
+
+
+def test_extra_summary_parser_reads_lines_with_and_without_equivalent() -> None:
+    module = _load(ASSERT_SUMMARY)
+    old = "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+    new = f"{old}, 2 equivalent"
+    report = f"# report\n\n{old}\n\n{new}\n\n{new}, 3 surplus\n"
+
+    # Reports from 0.1.x end at changed-unknown; later ones add equivalent (SHA-239).
+    assert module.summary_lines(report) == [old, new]
 
 
 def test_extra_sample_is_the_scenario_doc_report() -> None:

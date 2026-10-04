@@ -45,7 +45,7 @@ outputs:
     description: Path of the markdown report written by authzlock diff.
     value: ${{ steps.diff.outputs.report-path }}
   summary:
-    description: The report's summary line, for example "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown".
+    description: The report's summary line, for example "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent".
     value: ${{ steps.diff.outputs.summary }}
   loosened:
     description: Number of loosened routes.

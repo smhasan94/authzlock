@@ -4,7 +4,9 @@
         [--row-contains TEXT]...] [--contains TEXT]...
 
 - `--summary LINE`: the report has exactly one summary line and it equals LINE, for example
-  `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown`.
+  `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent`. Reports
+  from releases before the `equivalent` label (0.1.x) end at `changed-unknown`; both forms
+  are recognised.
 - `--row LABEL`: the report has exactly one table row whose first cell is LABEL; the row is
   printed so the job log shows it. Each `--row-contains TEXT` must appear in that row.
 - `--contains TEXT`: TEXT appears somewhere in the report, ignoring case.
@@ -23,7 +25,8 @@ from pathlib import Path
 
 LABELS = ("loosened", "tightened", "added", "removed", "changed-unknown")
 SUMMARY_RE = re.compile(
-    r"^" + r", ".join(rf"\d+ {re.escape(label)}" for label in LABELS) + r"$", re.MULTILINE
+    r"^" + r", ".join(rf"\d+ {re.escape(label)}" for label in LABELS) + r"(?:, \d+ equivalent)?$",
+    re.MULTILINE,
 )
 
 

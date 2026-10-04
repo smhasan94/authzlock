@@ -7,10 +7,11 @@ registry changes, then the hint to run `authzlock update`. Empty groups are left
 Lines are never wrapped.
 
 `render_text(report)` and `render_markdown(report)` are what `authzlock diff` prints for a
-`DiffReport` built with `build_report`. Both end with the summary line, the five counts in
+`DiffReport` built with `build_report`. Both end with the summary line, the six counts in
 `SUMMARY_LABELS` order, for example `1 loosened, 0 tightened, 2 added, 0 removed,
-0 changed-unknown`, on a line of its own so CI scripts can parse it. The markdown starts
-with `MARKDOWN_MARKER`, a hidden comment the GitHub Action uses to find its own comment.
+0 changed-unknown, 0 equivalent`, on a line of its own so CI scripts can parse it. The
+markdown starts with `MARKDOWN_MARKER`, a hidden comment the GitHub Action uses to find its
+own comment.
 
 `to_document(report, locations)` is the machine-readable form of a report, described in
 `docs/diff-json.md`; `render_json` prints it and `sarif.render_sarif` maps it to SARIF.
@@ -92,6 +93,7 @@ SUMMARY_LABELS: tuple[Label, ...] = (
     "added",
     "removed",
     "changed-unknown",
+    "equivalent",
 )
 # Labels shown in the open markdown table; the others go in collapsed sections.
 _OPEN_LABELS: frozenset[Label] = frozenset({"loosened", "tightened"})
@@ -286,7 +288,8 @@ def render_markdown(report: DiffReport) -> str:
 
     Layout: the hidden marker, a heading, the optional note, the summary line, a table of
     loosened and tightened routes, then one collapsed `<details>` section each for added,
-    removed and changed-unknown routes and for custom permission registry changes.
+    removed, changed-unknown and equivalent routes and for custom permission registry
+    changes.
     """
     lines = [MARKDOWN_MARKER, "### authzlock: access-control changes", ""]
     for note in report.notes:

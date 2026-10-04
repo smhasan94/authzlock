@@ -111,6 +111,19 @@ boolean expressions over classes whose logic is unknown is not something authzlo
 so any change that touches a composed expression is `changed-unknown` (rule R8), even one
 that looks obvious, such as dropping `| IsOwner`.
 
+## Per-method permissions
+
+The lockfile keeps one permission list per route, even when the route serves several HTTP
+methods. Two DRF built-ins depend on the method, and only during classification (rule R9)
+are they expanded per method: `IsAuthenticatedOrReadOnly` (anyone on GET, HEAD and
+OPTIONS, authenticated users otherwise) and `DjangoModelPermissionsOrAnonReadOnly` (anyone
+on the safe methods, `DjangoModelPermissions` otherwise). Nothing else is expanded: custom
+and third-party classes that check `request.method` themselves, such as a user-defined
+`IsOwnerOrReadOnly`, are opaque, and so is `DjangoObjectPermissions`.
+`DjangoModelPermissions` stays unranked: its per-method model permission map is not
+modelled, so it only takes part through the custom-class rules R2 to R4, which treat it as
+requiring at least an authenticated user. A route whose `methods` is `any` is not expanded.
+
 ## Custom permission classes
 
 A permission class from any module other than `rest_framework.permissions`, including

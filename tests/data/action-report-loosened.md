@@ -1,7 +1,7 @@
 <!-- authzlock -->
 ### authzlock: access-control changes
 
-1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown
+1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent
 
 | Change | Methods | Path | View | Details |
 |---|---|---|---|---|

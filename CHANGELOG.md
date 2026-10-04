@@ -20,6 +20,16 @@ All notable changes to authzlock are recorded here. The format follows
 - `authzlock gen-tests` writes a pytest module from the lockfile that checks anonymous
   requests are refused on routes protected by DRF built-ins or Django auth decorators; routes
   it cannot reason about get a skipped test naming why. See `docs/cli.md`.
+- Rule R9 judges `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly` per
+  HTTP method, and the new label `equivalent` marks a permission change that no method's
+  effective rule notices. See `docs/classification.md`.
+
+### Changed
+
+- The `diff` summary line has a sixth count, `equivalent`, at the end:
+  `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent`. The JSON
+  document gains `summary.equivalent` and the label, and SARIF a rule of level `note`. The
+  GitHub Action's `summary` output changes the same way once `v1` points at this release.
 
 ## [0.1.0] - 2026-10-02
 

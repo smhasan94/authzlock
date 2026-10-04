@@ -24,6 +24,7 @@ LEVELS: Mapping[str, str] = {
     "added": "warning",
     "tightened": "note",
     "removed": "note",
+    "equivalent": "note",
 }
 _DESCRIPTIONS: Mapping[str, str] = {
     "loosened": "A route's access rules became less restrictive.",
@@ -31,6 +32,7 @@ _DESCRIPTIONS: Mapping[str, str] = {
     "added": "A route was added; review who may call it.",
     "removed": "A route was removed.",
     "changed-unknown": "A route's access rules changed in a way authzlock cannot rank.",
+    "equivalent": "A route's permission list changed but no method's effective rule did.",
 }
 
 

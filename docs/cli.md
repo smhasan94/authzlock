@@ -211,14 +211,14 @@ still compared correctly. When the base ref has no lockfile at that path, the ba
 as empty, every current route is reported as `added`, and the output starts with the note
 `base ref has no authz.lock (<ref>:<path>); every route is reported as added`.
 
-Every route that differs gets one label: `added`, `removed`, `loosened`, `tightened` or
-`changed-unknown`. [classification.md](classification.md) lists the rules R1 to R8 that
-decide between the last three.
+Every route that differs gets one label: `added`, `removed`, `loosened`, `tightened`,
+`changed-unknown` or `equivalent`. [classification.md](classification.md) lists the rules
+R1 to R9 that decide between the last four.
 
 ### Text output
 
 One line per route, grouped by label in the order loosened, tightened, added, removed,
-changed-unknown, with a blank line between groups. Each line is the label (padded to 15
+changed-unknown, equivalent, with a blank line between groups. Each line is the label (padded to 15
 characters), the route key `<METHODS> <path> -> <view>`, then the field changes as
 `field: old -> new` separated by `; ` and, for a changed route, the rule and reason in
 parentheses. Added and removed routes show their `permission_classes` and `django_auth`
@@ -232,7 +232,7 @@ tightened       GET explicit/ -> api.views.ExplicitView  permission_classes: [re
 
 custom-permission changed api.permissions.IsOwner  used_by: [DELETE,GET orders/<int:pk>/ -> api.views.OrderDetailView, GET composed/ -> api.views.ComposedView, GET notes/ -> api.views.NotesView] -> [GET composed/ -> api.views.ComposedView, GET notes/ -> api.views.NotesView]
 
-1 loosened, 1 tightened, 0 added, 0 removed, 0 changed-unknown
+1 loosened, 1 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent
 ```
 
 When nothing differs, the output is the single line `no changes`.
@@ -242,8 +242,8 @@ When nothing differs, the output is the single line `no changes`.
 Meant for a pull request comment. The first line is the hidden marker `<!-- authzlock -->`,
 which the GitHub Action uses to find and update its own comment. Then come a heading, the
 note when the base has no lockfile, the summary line, a table of the `loosened` and
-`tightened` routes, and one collapsed `<details>` section each for `added`, `removed` and
-`changed-unknown` routes and for custom permission registry changes. Every table has the
+`tightened` routes, and one collapsed `<details>` section each for `added`, `removed`,
+`changed-unknown` and `equivalent` routes and for custom permission registry changes. Every table has the
 columns Change, Methods, Path, View and Details; Details holds the rule and reason and one
 `field`: `old` → `new` entry per changed field. A `|` inside a value is escaped as `\|`.
 
@@ -251,7 +251,7 @@ columns Change, Methods, Path, View and Details; Details holds the rule and reas
 <!-- authzlock -->
 ### authzlock: access-control changes
 
-1 loosened, 1 tightened, 0 added, 0 removed, 0 changed-unknown
+1 loosened, 1 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent
 
 | Change | Methods | Path | View | Details |
 |---|---|---|---|---|
@@ -259,7 +259,7 @@ columns Change, Methods, Path, View and Details; Details holds the rule and reas
 | tightened | GET | `explicit/` | `api.views.ExplicitView` | `R1: strongest built-in rest_framework.permissions.IsAuthenticated -> rest_framework.permissions.IsAdminUser`<br>`permission_classes`: `[rest_framework.permissions.IsAuthenticated]` → `[rest_framework.permissions.IsAdminUser]` |
 ```
 
-When nothing differs, the summary line has five zeros and is followed by
+When nothing differs, the summary line has six zeros and is followed by
 `No access-control changes against <ref>.`
 
 ### Summary line
@@ -267,10 +267,12 @@ When nothing differs, the summary line has five zeros and is followed by
 Both formats contain exactly one summary line, on a line of its own:
 
 ```text
-<n> loosened, <n> tightened, <n> added, <n> removed, <n> changed-unknown
+<n> loosened, <n> tightened, <n> added, <n> removed, <n> changed-unknown, <n> equivalent
 ```
 
-The five counts are always present, in this order, and count routes. Custom permission
+The six counts are always present, in this order, and count routes. Releases before 0.2.0
+printed only the first five; `equivalent` was added at the end so a parser that reads the
+counts by label keeps working. Custom permission
 registry changes are not counted. CI scripts may parse this line.
 
 ### JSON output
@@ -286,7 +288,7 @@ permission registry changes. [diff-json.md](diff-json.md) describes every key an
 `--format sarif` prints a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
 log built from the same document: one rule per label and one result per changed route,
 at the line of the route's view. Levels: `loosened` is an error, `added` and
-`changed-unknown` are warnings, `tightened` and `removed` are notes. Each result carries
+`changed-unknown` are warnings, `tightened`, `removed` and `equivalent` are notes. Each result carries
 the route key in `partialFingerprints`, so code scanning keeps one alert per route across
 pushes. Custom permission registry changes have no route and are not results. A base ref
 without a lockfile adds a note to the run's `toolExecutionNotifications`.

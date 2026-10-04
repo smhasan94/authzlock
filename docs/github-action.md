@@ -79,7 +79,7 @@ report is still printed in the job log and the job summary.
 | Output | Meaning |
 |--------|---------|
 | `report-path` | Path of the markdown report, `$RUNNER_TEMP/authzlock-diff.md`. |
-| `summary` | The summary line, for example `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown`. |
+| `summary` | The summary line, for example `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent`. |
 | `loosened` | Number of loosened routes. |
 
 Give the action step an `id` to read them, for example
@@ -98,7 +98,7 @@ Give the action step an `id` to read them, for example
    and never deleted. Outside a pull request event the step prints a warning and posts
    nothing.
 5. When `fail-on-loosened` is `true` and the summary line counts at least one loosened
-   route, fails the job. Tightened, added, removed and changed-unknown routes never fail it.
+   route, fails the job. Tightened, added, removed, changed-unknown and equivalent routes never fail it.
 
 The comment is the markdown described in
 [cli.md](cli.md#markdown-output): the marker, a heading, the summary line, a table of
@@ -133,7 +133,7 @@ On every pull request to `main` three jobs run, none of which posts a comment:
 
 | Job | Scenario | Checks |
 |-----|----------|--------|
-| `loosened` | loosening edit applied, `fail-on-loosened: false` | The summary line is exactly `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown` and the one `loosened` row contains `DELETE` and `billing.views.InvoiceDetailView`; the row is printed in the log. |
+| `loosened` | loosening edit applied, `fail-on-loosened: false` | The summary line is exactly `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent` and the one `loosened` row contains `DELETE` and `billing.views.InvoiceDetailView`; the row is printed in the log. |
 | `clean` | unchanged | The summary line counts nothing and the report says no access-control changes. |
 | `fails-when-loosened` | loosening edit applied, `fail-on-loosened: true` | The action step, run with `continue-on-error`, has the outcome `failure`, and its report counts one loosened route, so the failure came from the gate. |
 

@@ -16,7 +16,8 @@ runs on the same tree print the same bytes, and no value contains an absolute pa
   "schema_version": 1,
   "tool": {"name": "authzlock", "version": "0.1.0"},
   "base": {"ref": "origin/main", "lockfile": "authz.lock", "lockfile_found": true},
-  "summary": {"loosened": 1, "tightened": 0, "added": 0, "removed": 0, "changed_unknown": 0},
+  "summary": {"loosened": 1, "tightened": 0, "added": 0, "removed": 0, "changed_unknown": 0,
+              "equivalent": 0},
   "changes": [
     {
       "label": "loosened",
@@ -62,9 +63,10 @@ runs on the same tree print the same bytes, and no value contains an absolute pa
 | `summary.added` | integer | Routes labelled `added`. |
 | `summary.removed` | integer | Routes labelled `removed`. |
 | `summary.changed_unknown` | integer | Routes labelled `changed-unknown`. |
+| `summary.equivalent` | integer | Routes labelled `equivalent`: the permission list changed but no method's effective rule did. |
 | `changes` | list | One entry per route that differs, sorted by route key. Empty when nothing differs. |
-| `changes[].label` | string | `loosened`, `tightened`, `added`, `removed` or `changed-unknown`. |
-| `changes[].rule` | string or null | The rule that decided the label, `R1` to `R8` (see [classification.md](classification.md)); `null` for added and removed routes. |
+| `changes[].label` | string | `loosened`, `tightened`, `added`, `removed`, `changed-unknown` or `equivalent`. |
+| `changes[].rule` | string or null | The rule that decided the label, `R1` to `R9` (see [classification.md](classification.md)); `null` for added and removed routes. |
 | `changes[].reason` | string | One-line reason; starts with the rule id for changed routes. |
 | `changes[].route` | object | The route: the current one, or the base one when removed. |
 | `changes[].route.key` | string | Route key, `<METHODS> <path> -> <view>`, as in `used_by` and the other outputs. |

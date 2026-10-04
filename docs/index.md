@@ -10,8 +10,8 @@ Start with the [README](../README.md) for installation and a quickstart.
   stay stable.
 - [diff-json.md](diff-json.md): the JSON document of `authzlock diff --format json`, which
   `--format sarif` is built from.
-- [classification.md](classification.md): the rules R1 to R8 that label a change `loosened`,
-  `tightened` or `changed-unknown`.
+- [classification.md](classification.md): the rules R1 to R9 that label a change `loosened`,
+  `tightened`, `changed-unknown` or `equivalent`.
 - [heuristics-and-limits.md](heuristics-and-limits.md): what `dynamic`, the object-scoped
   flag, decorator detection and composed permissions can and cannot tell you, and what a
   passing `check` does not prove.

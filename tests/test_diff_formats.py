@@ -74,6 +74,7 @@ def test_t1_json_on_scenario_validates_against_schema_and_counts_one_loosened(
         "added": 0,
         "removed": 0,
         "changed_unknown": 0,
+        "equivalent": 0,
     }
     assert document["tool"] == {"name": "authzlock", "version": __version__}
     [change] = document["changes"]
@@ -155,6 +156,7 @@ def test_t3_sarif_structure_rules_levels_and_fingerprints() -> None:
         "added": "warning",
         "tightened": "note",
         "removed": "note",
+        "equivalent": "note",
     }
     assert len(run["results"]) == 5
     for result, entry in zip(run["results"], report.entries, strict=True):
@@ -314,6 +316,6 @@ def test_extra_text_output_unchanged_by_new_formats(loosened_repo: Path) -> None
 
     assert result.returncode == EXIT_MISMATCH
     assert result.stdout.splitlines()[-1] == (
-        "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+        "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
     )
     assert not result.stdout.lstrip().startswith("{")

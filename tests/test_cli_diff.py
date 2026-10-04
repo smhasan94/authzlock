@@ -11,6 +11,8 @@ inventories and never load a project.
 from __future__ import annotations
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -32,10 +34,12 @@ IS_AUTHENTICATED = "rest_framework.permissions.IsAuthenticated"
 IS_ADMIN_USER = "rest_framework.permissions.IsAdminUser"
 ALLOW_ANY = "rest_framework.permissions.AllowAny"
 SUMMARY = re.compile(
-    r"^(\d+) loosened, (\d+) tightened, (\d+) added, (\d+) removed, (\d+) changed-unknown$",
+    r"^(\d+) loosened, (\d+) tightened, (\d+) added, (\d+) removed, (\d+) changed-unknown"
+    r", (\d+) equivalent$",
     re.MULTILINE,
 )
 NO_LOCKFILE_NOTE = "base ref has no authz.lock"
+SCRIPTS = Path(__file__).resolve().parent.parent / "scripts" / "ci"
 
 
 def _replace(path: Path, old: str, new: str) -> None:
@@ -104,7 +108,7 @@ def test_t2_loosened_line_names_methods_path_view(tmp_path: Path) -> None:
     assert DETAIL_KEY in line
     assert f"permission_classes: [{IS_OWNER}] -> [{IS_AUTHENTICATED}]" in line
     assert "R2" in line
-    assert _summary(result.stdout) == (1, 0, 0, 0, 0)
+    assert _summary(result.stdout) == (1, 0, 0, 0, 0, 0)
     # The lockfile in the working tree is neither read nor written.
     assert git(repo, "status", "--porcelain") == " M api/views.py\n"
 
@@ -116,7 +120,7 @@ def test_t3_markdown_summary_and_row(tmp_path: Path) -> None:
     result = _diff(repo, "--format", "markdown")
 
     assert result.returncode == EXIT_MISMATCH, result.stderr
-    assert _summary(result.stdout) == (1, 0, 0, 0, 0)
+    assert _summary(result.stdout) == (1, 0, 0, 0, 0, 0)
     assert "1 loosened" in result.stdout
     rows = [line for line in result.stdout.splitlines() if line.startswith("| loosened |")]
     assert len(rows) == 1, result.stdout
@@ -144,7 +148,7 @@ def test_t4_base_without_lockfile_reports_all_added_with_note(tmp_path: Path) ->
     assert any(DETAIL_KEY in line for line in added)
     for label in ("loosened", "tightened", "removed", "changed-unknown"):
         assert not _lines_starting(result.stdout, label), result.stdout
-    assert _summary(result.stdout) == (0, 0, route_count, 0, 0)
+    assert _summary(result.stdout) == (0, 0, route_count, 0, 0, 0)
 
     markdown = _diff(repo, "--format", "markdown")
     assert markdown.returncode == EXIT_MISMATCH, markdown.stderr
@@ -160,7 +164,7 @@ def test_t6_fail_on_loosened_ignores_tightened(tmp_path: Path) -> None:
     assert result.returncode == EXIT_OK, result.stdout + result.stderr
     tightened = _lines_starting(result.stdout, "tightened")
     assert len(tightened) == 1 and EXPLICIT_KEY in tightened[0], result.stdout
-    assert _summary(result.stdout) == (0, 1, 0, 0, 0)
+    assert _summary(result.stdout) == (0, 1, 0, 0, 0, 0)
     # Without the option any change fails.
     assert _diff(repo).returncode == EXIT_MISMATCH
 
@@ -176,7 +180,7 @@ def test_t8_lockfile_in_subdirectory_uses_repo_relative_path(tmp_path: Path) -> 
     assert NO_LOCKFILE_NOTE not in result.stdout
     lines = _lines_starting(result.stdout, "loosened")
     assert len(lines) == 1 and DETAIL_KEY in lines[0], result.stdout
-    assert _summary(result.stdout) == (1, 0, 0, 0, 0)
+    assert _summary(result.stdout) == (1, 0, 0, 0, 0, 0)
 
 
 def test_extra_run_from_subdirectory_resolves_lockfile_against_repo_root(tmp_path: Path) -> None:
@@ -187,7 +191,7 @@ def test_extra_run_from_subdirectory_resolves_lockfile_against_repo_root(tmp_pat
 
     assert result.returncode == EXIT_MISMATCH, result.stderr
     assert NO_LOCKFILE_NOTE not in result.stdout
-    assert _summary(result.stdout) == (1, 0, 0, 0, 0)
+    assert _summary(result.stdout) == (1, 0, 0, 0, 0, 0)
 
 
 def test_extra_fail_on_loosened_still_fails_on_loosened(tmp_path: Path) -> None:
@@ -198,7 +202,7 @@ def test_extra_fail_on_loosened_still_fails_on_loosened(tmp_path: Path) -> None:
     result = _diff(repo, "--fail-on", "loosened", "--format", "markdown")
 
     assert result.returncode == EXIT_MISMATCH, result.stderr
-    assert _summary(result.stdout) == (1, 1, 0, 0, 0)
+    assert _summary(result.stdout) == (1, 1, 0, 0, 0, 0)
 
 
 def test_extra_markdown_contains_marker(tmp_path: Path) -> None:
@@ -211,7 +215,7 @@ def test_extra_markdown_contains_marker(tmp_path: Path) -> None:
     assert clean.returncode == EXIT_OK, clean.stderr
     assert clean.stdout.startswith("<!-- authzlock -->\n")
     assert "No access-control changes" in clean.stdout
-    assert _summary(clean.stdout) == (0, 0, 0, 0, 0)
+    assert _summary(clean.stdout) == (0, 0, 0, 0, 0, 0)
     assert changed.stdout.startswith("<!-- authzlock -->\n")
 
 
@@ -360,7 +364,9 @@ def test_extra_render_text_groups_in_summary_order() -> None:
 
     labels = [line.split()[0] for line in text.splitlines() if line and line[0].islower()]
     assert labels == ["loosened", "tightened", "added", "removed", "changed-unknown"]
-    assert text.splitlines()[-1] == "1 loosened, 1 tightened, 1 added, 1 removed, 1 changed-unknown"
+    assert text.splitlines()[-1] == (
+        "1 loosened, 1 tightened, 1 added, 1 removed, 1 changed-unknown, 0 equivalent"
+    )
     added = _lines_starting(text, "added")
     assert added == [
         f"added           GET,POST new/(a|b)/ -> app.views.New  permission_classes: [{ALLOW_ANY}]"
@@ -386,7 +392,7 @@ def test_extra_render_markdown_tables_details_and_escaping() -> None:
 
     lines = markdown.splitlines()
     assert lines[0] == "<!-- authzlock -->"
-    assert "1 loosened, 1 tightened, 1 added, 1 removed, 1 changed-unknown" in lines
+    assert "1 loosened, 1 tightened, 1 added, 1 removed, 1 changed-unknown, 0 equivalent" in lines
     # Loosened and tightened are in the open table, the rest in collapsed sections.
     open_part, _, collapsed = markdown.partition("<details>")
     assert "| loosened |" in open_part and "| tightened |" in open_part
@@ -412,3 +418,86 @@ def test_extra_render_includes_custom_permission_changes() -> None:
     assert f"custom-permission changed {IS_OWNER}  docstring: Old. -> New." in text
     assert "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown" in text
     assert IS_OWNER in markdown and "No access-control changes" not in markdown
+
+
+# SHA-239 T9: per-method permissions end to end --------------------------------------------
+
+ARCHIVE_ACTION = '@action(detail=True, methods=["post"], permission_classes=[{}])'
+CUSTOMERS_LIST = "GET ^customers/$ -> billing.views.CustomerViewSet"
+ARCHIVE = "POST ^invoices/(?P<pk>[^/.]+)/archive/$ -> billing.views.InvoiceViewSet"
+
+
+def _per_method_repo(tmp_path: Path) -> Path:
+    """drf_viewsets with the archive action on IsAuthenticated committed as the base."""
+    repo = make_repo("drf_viewsets", tmp_path)
+    views = repo / "billing" / "views.py"
+    _replace(views, ARCHIVE_ACTION.format("IsAdminUser"), ARCHIVE_ACTION.format("IsAuthenticated"))
+    update = run_cli(["update"], cwd=repo, env=project_env(repo))
+    assert update.returncode == EXIT_OK, update.stderr
+    git(repo, "add", "--all")
+    git(repo, "commit", "--quiet", "--message", "archive on IsAuthenticated")
+    _replace(
+        views,
+        "from rest_framework.permissions import IsAdminUser, IsAuthenticated\n",
+        "from rest_framework.permissions import (\n"
+        "    IsAdminUser,\n    IsAuthenticated,\n    IsAuthenticatedOrReadOnly,\n)\n",
+    )
+    _replace(
+        views,
+        ARCHIVE_ACTION.format("IsAuthenticated"),
+        ARCHIVE_ACTION.format("IsAuthenticatedOrReadOnly"),
+    )
+    return repo
+
+
+def test_t9_diff_renders_equivalent_route_and_summary_has_six_counts(tmp_path: Path) -> None:
+    repo = _per_method_repo(tmp_path)
+    _replace(
+        repo / "settings.py",
+        '"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],',
+        '"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticatedOrReadOnly"],',
+    )
+    env = project_env(repo)
+
+    text = run_cli(["diff", "--base", "HEAD"], cwd=repo, env=env)
+    markdown = run_cli(["diff", "--base", "HEAD", "--format", "markdown"], cwd=repo, env=env)
+    gate = run_cli(["diff", "--base", "HEAD", "--fail-on", "loosened"], cwd=repo, env=env)
+
+    loosened = _lines_starting(text.stdout, "loosened")
+    equivalent = _lines_starting(text.stdout, "equivalent")
+    assert any(CUSTOMERS_LIST in line for line in loosened), text.stdout
+    assert any(ARCHIVE in line and "(R9: no method's" in line for line in equivalent), text.stdout
+    counts = _summary(text.stdout)
+    assert counts[0] > 0 and counts[5] > 0, counts
+    assert "<summary>" in markdown.stdout and "equivalent route" in markdown.stdout
+    assert gate.returncode == EXIT_MISMATCH
+
+    report = tmp_path / "report.md"
+    report.write_text(markdown.stdout, encoding="utf-8")
+    summary_line = next(line for line in text.stdout.splitlines() if SUMMARY.match(line))
+    checked = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPTS / "assert_summary.py"),
+            str(report),
+            "--summary",
+            summary_line,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+
+
+def test_t9_equivalent_only_change_passes_fail_on_loosened(tmp_path: Path) -> None:
+    repo = _per_method_repo(tmp_path)
+    env = project_env(repo)
+
+    gate = run_cli(["diff", "--base", "HEAD", "--fail-on", "loosened"], cwd=repo, env=env)
+    strict = run_cli(["diff", "--base", "HEAD"], cwd=repo, env=env)
+
+    assert gate.returncode == EXIT_OK, gate.stdout + gate.stderr
+    assert strict.returncode == EXIT_MISMATCH
+    assert _summary(gate.stdout)[:5] == (0, 0, 0, 0, 0)
+    assert _summary(gate.stdout)[5] > 0

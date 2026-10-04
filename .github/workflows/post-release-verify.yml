@@ -107,6 +107,6 @@ jobs:
           REPORT: ${{ steps.authzlock.outputs.report-path }}
         run: >-
           python scripts/ci/assert_summary.py "$REPORT"
-          --summary "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+          --summary "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
           --row loosened --row-contains DELETE
           --row-contains billing.views.InvoiceDetailView
