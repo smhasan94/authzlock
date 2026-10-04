@@ -16,11 +16,10 @@ These go before the command, for example `authzlock --version`.
 
 ## Shared conventions
 
-Every command that reads a project or a lockfile accepts these options:
+Every command accepts these options:
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
 | `--lockfile PATH` | `authz.lock` | Lockfile path, relative to the current directory. Overrides [configuration](#configuration). |
 | `--quiet`, `-q` | off | Print nothing on success. Errors are still printed. |
 | `--help` | | Show the command's options and exit. |
@@ -101,6 +100,7 @@ updated `authz.lock` with the change.
 
 | Option | Default | Meaning |
 |--------|---------|---------|
+| `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
 | `--ignore-path PREFIX` | | Leave out routes whose URL pattern starts with `PREFIX`. Repeatable. |
 | `--ignore-view PREFIX` | | Leave out routes whose view is in module `PREFIX`. Repeatable. |
 | `--no-ignore` | off | Clear the recorded ignore list. Cannot be combined with the two options above. |
@@ -139,6 +139,10 @@ the command to run in CI and in a pre-commit hook.
 $ authzlock check --settings mysite.settings
 authz.lock: up to date
 ```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
 
 The comparison is between the parsed lockfile and the fresh extraction, not between file
 bytes, so a lockfile that differs only in YAML formatting (blank lines, quoting, key
@@ -191,11 +195,12 @@ $ authzlock diff --base origin/main --settings mysite.settings
 
 | Option | Default | Meaning |
 |--------|---------|---------|
+| `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
 | `--base REF` | required | Git ref (branch, tag or commit) whose committed lockfile is the old side. |
 | `--format text\|markdown\|json\|sarif` | `text` | Output format. `json` and `sarif` are described below. |
 | `--fail-on any\|loosened` | `any` | `any`: exit 1 on any change. `loosened`: exit 1 only when a route is loosened. Overrides [configuration](#configuration). |
 
-`--settings`, `--lockfile` and `--quiet` work as for the other commands.
+`--lockfile` and `--quiet` work as for the other commands.
 
 The old side is the lockfile as committed at `--base`, read with
 `git show <ref>:<path>`, where the path is the `--lockfile` path made relative to the
@@ -332,3 +337,47 @@ then reports the loosened routes as errors.
 
 Git and the base lockfile are read before the project is loaded. With `--quiet`, nothing is
 printed when nothing differs; any difference is always printed.
+
+## authzlock gen-tests
+
+Writes a pytest module that sends anonymous requests to every route the lockfile says
+requires authentication and expects them to be refused. It reads only the lockfile: the
+project is not loaded and no settings module is needed until the generated tests run.
+
+```console
+$ authzlock gen-tests
+tests/test_authz_lock.py: 24 routes, 5 tests, 1 skipped, 18 without assertions
+$ pytest tests/test_authz_lock.py
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--output PATH` | `tests/test_authz_lock.py` | Where to write the module, relative to the current directory. Parent directories are created. |
+
+`--lockfile` and `--quiet` work as for the other commands. What each route gets:
+
+| Lockfile says | Generated test |
+|---------------|----------------|
+| `IsAuthenticated` or `IsAdminUser` among `permission_classes` | Every method in `methods` must return 401 or 403. |
+| `IsAuthenticatedOrReadOnly` as the strongest class | POST, PUT, PATCH and DELETE must return 401 or 403. |
+| `django_auth` with `login_required: true` or a `permission_required` list | Every method must return 302, 401 or 403; the decorators redirect to the login page. `methods: [any]` is tested with GET. |
+| `dynamic`, a custom or third-party class, a composed expression, or `user_passes_test` alone | One test marked `skip`, whose reason names the cause. |
+| A URL pattern no sample URL can be built for, such as a format-suffix route | One test marked `skip`, whose reason names the pattern. |
+| `AllowAny`, no permission data, or no auth decorator | No test; counted as "without assertions". |
+
+Sample URLs are built from the pattern: `<int:pk>` and untyped converters become `1`,
+`<slug:s>`, `<str:s>` and `<path:s>` become the parameter name, `<uuid:u>` a fixed UUID,
+and each regex group the first of a few sample values it matches. A 404 from a generated
+test means the sample URL did not reach the view.
+
+The module needs `DJANGO_SETTINGS_MODULE` when it runs, like any Django test. It sets
+Django up itself, and does nothing extra under pytest-django. It never touches the database:
+DRF checks permissions and Django's decorators run before the view does. Requests go
+through your middleware, so `login_required` needs `AuthenticationMiddleware`, as it does in
+production.
+
+The output has no timestamps, so the same lockfile always gives the same bytes, and the file
+is only rewritten when it changes. Commit it, and regenerate it after `authzlock update`.
+The summary line counts routes, tests, skipped tests and routes without assertions. Exit
+code 0 on success, 2 when the lockfile is missing or invalid or the output cannot be
+written.

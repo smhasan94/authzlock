@@ -17,6 +17,9 @@ All notable changes to authzlock are recorded here. The format follows
 - `authzlock update --ignore-path PREFIX --ignore-view PREFIX` leaves routes out of the
   lockfile, for example the Django admin; the list is recorded under `ignore` and applied
   by `check` and `diff`. `--no-ignore` clears it. Lockfiles without a list are unchanged.
+- `authzlock gen-tests` writes a pytest module from the lockfile that checks anonymous
+  requests are refused on routes protected by DRF built-ins or Django auth decorators; routes
+  it cannot reason about get a skipped test naming why. See `docs/cli.md`.
 
 ## [0.1.0] - 2026-10-02
 

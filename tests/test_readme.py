@@ -263,7 +263,7 @@ def _cli_words() -> set[str]:
 
 def test_t6_no_undocumented_cli_commands_in_readme() -> None:
     allowed = _cli_words()
-    assert allowed == {"update", "check", "diff", "--version"}, allowed
+    assert allowed == {"update", "check", "diff", "gen-tests", "--version"}, allowed
 
     used = set(INVOCATION.findall(_code(_readme())))
 
