@@ -307,10 +307,10 @@ def test_extra_unreadable_base_lockfile_exits_2(isolated_git: Path) -> None:
 
 
 def test_extra_unknown_format_is_a_usage_error(isolated_git: Path) -> None:
-    result = _invoke("--base", "HEAD", "--format", "json")
+    result = _invoke("--base", "HEAD", "--format", "xml")
 
     assert result.exit_code == EXIT_ERROR
-    assert "json" in result.stderr
+    assert "xml" in result.stderr
 
 
 # Renderers --------------------------------------------------------------------------------

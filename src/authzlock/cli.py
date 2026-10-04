@@ -30,7 +30,15 @@ from authzlock.errors import (
     ProjectLoadError,
 )
 from authzlock.model import Inventory
-from authzlock.render import build_report, render_check, render_markdown, render_text
+from authzlock.render import (
+    DiffReport,
+    build_report,
+    render_check,
+    render_json,
+    render_markdown,
+    render_text,
+    to_document,
+)
 
 DEFAULT_LOCKFILE = Path("authz.lock")
 
@@ -92,6 +100,8 @@ def main(
 class OutputFormat(str, Enum):
     text = "text"
     markdown = "markdown"
+    json = "json"
+    sarif = "sarif"
 
 
 class FailOn(str, Enum):
@@ -281,6 +291,16 @@ def _base_inventory(ref: str, lockfile_path: Path) -> tuple[Inventory | None, st
         raise LockfileError(f"{ref}:{relative}: {exc}") from exc
 
 
+def _render_document(report: DiffReport, output_format: OutputFormat) -> str:
+    """The JSON or SARIF document for `report`, with view locations from the loaded project."""
+    from authzlock.locate import locate_entries
+    from authzlock.sarif import render_sarif
+
+    locations = locate_entries(report.entries, gitutil.repo_root(Path.cwd()))
+    document = to_document(report, locations)
+    return render_sarif(document) if output_format is OutputFormat.sarif else render_json(document)
+
+
 @app.command()
 def diff(
     ctx: typer.Context,
@@ -322,7 +342,11 @@ def diff(
         lockfile=relative,
         base_found=base_inventory is not None,
     )
-    if not (report.diff.is_empty and quiet):
+    if output_format in (OutputFormat.json, OutputFormat.sarif):
+        # A machine-readable document is printed even with --quiet, so a redirect to a file
+        # always yields a valid document.
+        typer.echo(_render_document(report, output_format), nl=False)
+    elif not (report.diff.is_empty and quiet):
         render = render_markdown if output_format is OutputFormat.markdown else render_text
         typer.echo(render(report), nl=False)
     if options.fail_on is FailOn.loosened:

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smhasan94/authzlock/blob/main/docs/diff.schema.json",
+  "title": "authzlock diff --format json",
+  "description": "The document printed by `authzlock diff --format json`. See docs/diff-json.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool", "base", "summary", "changes", "custom_permissions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "authzlock"},
+        "version": {"type": "string"}
+      }
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "lockfile", "lockfile_found"],
+      "properties": {
+        "ref": {"type": "string"},
+        "lockfile": {"type": "string"},
+        "lockfile_found": {"type": "boolean"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["loosened", "tightened", "added", "removed", "changed_unknown"],
+      "properties": {
+        "loosened": {"$ref": "#/$defs/count"},
+        "tightened": {"$ref": "#/$defs/count"},
+        "added": {"$ref": "#/$defs/count"},
+        "removed": {"$ref": "#/$defs/count"},
+        "changed_unknown": {"$ref": "#/$defs/count"}
+      }
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "rule", "reason", "route", "fields", "location"],
+        "properties": {
+          "label": {"enum": ["loosened", "tightened", "added", "removed", "changed-unknown"]},
+          "rule": {
+            "oneOf": [{"type": "string", "pattern": "^R[1-9][0-9]*$"}, {"type": "null"}]
+          },
+          "reason": {"type": "string"},
+          "route": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "path", "methods", "view"],
+            "properties": {
+              "key": {"type": "string"},
+              "path": {"type": "string"},
+              "methods": {"type": "array", "items": {"type": "string"}},
+              "view": {"type": "string"}
+            }
+          },
+          "fields": {"type": "array", "items": {"$ref": "#/$defs/fieldChange"}},
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "line"],
+            "properties": {
+              "file": {"type": "string", "pattern": "^[^/\\\\][^\\\\]*$"},
+              "line": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "custom_permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["added", "removed", "changed"],
+      "properties": {
+        "added": {"type": "array", "items": {"type": "string"}},
+        "removed": {"type": "array", "items": {"type": "string"}},
+        "changed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "fields"],
+            "properties": {
+              "path": {"type": "string"},
+              "fields": {"type": "array", "items": {"$ref": "#/$defs/fieldChange"}}
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "fieldChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "old", "new"],
+      "properties": {
+        "field": {"type": "string"},
+        "old": {},
+        "new": {}
+      }
+    }
+  }
+}

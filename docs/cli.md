@@ -161,7 +161,7 @@ $ authzlock diff --base origin/main --settings mysite.settings
 | Option | Default | Meaning |
 |--------|---------|---------|
 | `--base REF` | required | Git ref (branch, tag or commit) whose committed lockfile is the old side. |
-| `--format text\|markdown` | `text` | Output format. |
+| `--format text\|markdown\|json\|sarif` | `text` | Output format. `json` and `sarif` are described below. |
 | `--fail-on any\|loosened` | `any` | `any`: exit 1 on any change. `loosened`: exit 1 only when a route is loosened. Overrides [configuration](#configuration). |
 
 `--settings`, `--lockfile` and `--quiet` work as for the other commands.
@@ -236,6 +236,58 @@ Both formats contain exactly one summary line, on a line of its own:
 
 The five counts are always present, in this order, and count routes. Custom permission
 registry changes are not counted. CI scripts may parse this line.
+
+### JSON output
+
+`--format json` prints one JSON document with the summary counts, every change with its
+label, rule, reason, changed fields and the file and line of its view, and the custom
+permission registry changes. [diff-json.md](diff-json.md) describes every key and
+[diff.schema.json](diff.schema.json) is its JSON Schema. The document is printed even with
+`--quiet`.
+
+### SARIF and GitHub code scanning
+
+`--format sarif` prints a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)
+log built from the same document: one rule per label and one result per changed route,
+at the line of the route's view. Levels: `loosened` is an error, `added` and
+`changed-unknown` are warnings, `tightened` and `removed` are notes. Each result carries
+the route key in `partialFingerprints`, so code scanning keeps one alert per route across
+pushes. Custom permission registry changes have no route and are not results. A base ref
+without a lockfile adds a note to the run's `toolExecutionNotifications`.
+
+The log describes the changes in one pull request, not the state of the repository: after
+the pull request is merged, the next diff is empty and the alerts close. To show the
+results in a pull request's code scanning view:
+
+```yaml
+name: authzlock code scanning
+on: pull_request
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  authzlock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pip install authzlock
+      - run: >
+          authzlock diff --base origin/${{ github.base_ref }} --format sarif
+          --settings mysite.settings > authzlock.sarif || true
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: authzlock.sarif
+          category: authzlock
+```
+
+`|| true` keeps the job going when `diff` exits 1 so the upload step runs; code scanning
+then reports the loosened routes as errors.
 
 ### Exit codes
 

@@ -11,6 +11,9 @@ Lines are never wrapped.
 `SUMMARY_LABELS` order, for example `1 loosened, 0 tightened, 2 added, 0 removed,
 0 changed-unknown`, on a line of its own so CI scripts can parse it. The markdown starts
 with `MARKDOWN_MARKER`, a hidden comment the GitHub Action uses to find its own comment.
+
+`to_document(report, locations)` is the machine-readable form of a report, described in
+`docs/diff-json.md`; `render_json` prints it and `sarif.render_sarif` maps it to SARIF.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from authzlock import __version__
 from authzlock.classify import ClassifiedRoute, Label, classify_diff
 from authzlock.diff import Diff, FieldChange
 from authzlock.model import Route
@@ -295,3 +299,92 @@ def render_markdown(report: DiffReport) -> str:
             ]
         )
     return "\n".join(lines).rstrip("\n") + "\n"
+
+
+# Machine-readable output ----------------------------------------------------------------
+
+DOCUMENT_SCHEMA_VERSION = 1
+# Route fields that identify a route; every other lockfile field is listed under `fields`
+# for an added or removed route.
+_IDENTITY_FIELDS = ("path", "view", "methods")
+
+# (repository-relative file, line) of a route's view.
+Location = tuple[str, int]
+
+
+def _plain(value: Any) -> Any:
+    """`value` with tuples as lists and mappings as dicts, ready for JSON."""
+    if isinstance(value, list | tuple):
+        return [_plain(item) for item in value]
+    if isinstance(value, Mapping):
+        return {key: _plain(value[key]) for key in value}
+    return value
+
+
+def _json_fields(changes: Iterable[tuple[str, Any, Any]]) -> list[dict[str, Any]]:
+    return [{"field": name, "old": _plain(old), "new": _plain(new)} for name, old, new in changes]
+
+
+def _route_fields(entry: ClassifiedRoute) -> list[dict[str, Any]]:
+    """Changed fields of a changed route; every non-identity field of an added or removed one."""
+    if entry.change is not None:
+        return _json_fields((fc.field, fc.old, fc.new) for fc in entry.change.fields)
+    added = entry.classification.label == "added"
+    return _json_fields(
+        (name, None, value) if added else (name, value, None)
+        for name, value in entry.route.to_dict().items()
+        if name not in _IDENTITY_FIELDS
+    )
+
+
+def _change(entry: ClassifiedRoute, location: Location) -> dict[str, Any]:
+    return {
+        "label": entry.classification.label,
+        "rule": entry.classification.rule,
+        "reason": entry.classification.reason,
+        "route": {
+            "key": entry.key,
+            "path": entry.route.path,
+            "methods": list(entry.route.methods),
+            "view": entry.route.view,
+        },
+        "fields": _route_fields(entry),
+        "location": {"file": location[0], "line": location[1]},
+    }
+
+
+def to_document(report: DiffReport, locations: Mapping[str, Location]) -> dict[str, Any]:
+    """The report as a JSON-ready dict with a fixed key order; see `docs/diff-json.md`.
+
+    `locations` maps route keys to where their view is defined; a route without an entry
+    is reported at the lockfile, line 1.
+    """
+    fallback: Location = (report.lockfile, 1)
+    diff = report.diff
+    return {
+        "schema_version": DOCUMENT_SCHEMA_VERSION,
+        "tool": {"name": "authzlock", "version": __version__},
+        "base": {
+            "ref": report.ref,
+            "lockfile": report.lockfile,
+            "lockfile_found": report.base_found,
+        },
+        "summary": {label.replace("-", "_"): report.count(label) for label in SUMMARY_LABELS},
+        "changes": [_change(entry, locations.get(entry.key, fallback)) for entry in report.entries],
+        "custom_permissions": {
+            "added": [entry.path for entry in diff.custom_permissions_added],
+            "removed": [entry.path for entry in diff.custom_permissions_removed],
+            "changed": [
+                {
+                    "path": entry.path,
+                    "fields": _json_fields((fc.field, fc.old, fc.new) for fc in entry.fields),
+                }
+                for entry in diff.custom_permissions_changed
+            ],
+        },
+    }
+
+
+def render_json(document: Mapping[str, Any]) -> str:
+    """`document` as indented JSON with a trailing newline."""
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
