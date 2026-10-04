@@ -16,6 +16,8 @@ runs on the same tree print the same bytes, and no value contains an absolute pa
   "schema_version": 1,
   "tool": {"name": "authzlock", "version": "0.2.0"},
   "base": {"ref": "origin/main", "lockfile": "authz.lock", "lockfile_found": true},
+  "ignore": {"base": {"paths": [], "views": []}, "current": {"paths": [], "views": []},
+             "changed": false},
   "summary": {"loosened": 1, "tightened": 0, "added": 0, "removed": 0, "changed_unknown": 0,
               "equivalent": 0},
   "changes": [
@@ -57,6 +59,14 @@ runs on the same tree print the same bytes, and no value contains an absolute pa
 | `base.ref` | string | The `--base` ref as given. |
 | `base.lockfile` | string | Lockfile path relative to the repository root, with forward slashes. |
 | `base.lockfile_found` | boolean | `false` when the ref has no lockfile at that path; every route is then `added`. |
+| `ignore` | object | The route ignore lists ([cli.md](cli.md#ignoring-routes)) on both sides. |
+| `ignore.base` | object | The list recorded in the base lockfile; empty lists when it has none or there is no base lockfile. |
+| `ignore.base.paths` | list | Ignored path prefixes, sorted. |
+| `ignore.base.views` | list | Ignored view module prefixes, sorted. |
+| `ignore.current` | object | The list applied to the current project: the working tree's lockfile's, or the base's when the working tree has no lockfile. |
+| `ignore.current.paths` | list | Ignored path prefixes, sorted. |
+| `ignore.current.views` | list | Ignored view module prefixes, sorted. |
+| `ignore.changed` | boolean | `true` when the two lists differ; routes the change drops or restores are then `removed` or `added`, and SARIF output carries the same note as the text output. |
 | `summary` | object | Number of routes per label, the same counts as the summary line. |
 | `summary.loosened` | integer | Routes labelled `loosened`. |
 | `summary.tightened` | integer | Routes labelled `tightened`. |
@@ -66,7 +76,7 @@ runs on the same tree print the same bytes, and no value contains an absolute pa
 | `summary.equivalent` | integer | Routes labelled `equivalent`: the permission list changed but no method's effective rule did. |
 | `changes` | list | One entry per route that differs, sorted by route key. Empty when nothing differs. |
 | `changes[].label` | string | `loosened`, `tightened`, `added`, `removed`, `changed-unknown` or `equivalent`. |
-| `changes[].rule` | string or null | The rule that decided the label, `R1` to `R9` (see [classification.md](classification.md)); `null` for added and removed routes. |
+| `changes[].rule` | string or null | The rule that decided the label, `R1` to `R10` (see [classification.md](classification.md)); `null` for added and removed routes. |
 | `changes[].reason` | string | One-line reason; starts with the rule id for changed routes. |
 | `changes[].route` | object | The route: the current one, or the base one when removed. |
 | `changes[].route.key` | string | Route key, `<METHODS> <path> -> <view>`, as in `used_by` and the other outputs. |

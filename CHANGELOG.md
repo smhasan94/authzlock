@@ -11,6 +11,10 @@ All notable changes to authzlock are recorded here. The format follows
 - The GitHub Action takes an `app` input for FastAPI apps, and `settings-module` is now
   optional: with neither set, authzlock reads the project from the job's environment or
   `[tool.authzlock]`. See `docs/github-action.md`.
+- `diff --format json` has an `ignore` object with the base and current route ignore lists
+  and whether they differ, and `--format sarif` adds the "ignore list changed" note that text
+  and markdown output already print. The document's `schema_version` stays 1; validators
+  using an older copy of `docs/diff.schema.json` need the new one.
 
 ## [0.2.0] - 2026-10-04
 

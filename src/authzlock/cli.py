@@ -515,7 +515,7 @@ def diff(
         ref=base,
         lockfile=relative,
         base_found=base_inventory is not None,
-        ignore_changed=(base_ignore, ignore) if ignore != base_ignore else None,
+        ignore=(base_ignore, ignore),
     )
     if output_format in (OutputFormat.json, OutputFormat.sarif):
         # A machine-readable document is printed even with --quiet, so a redirect to a file
