@@ -8,6 +8,8 @@ Start with the [README](../README.md) for installation and a quickstart.
   and exit codes.
 - [lockfile.md](lockfile.md): the `authz.lock` format, every key, and what is guaranteed to
   stay stable.
+- [diff-json.md](diff-json.md): the JSON document of `authzlock diff --format json`, which
+  `--format sarif` is built from.
 - [classification.md](classification.md): the rules R1 to R8 that label a change `loosened`,
   `tightened` or `changed-unknown`.
 - [heuristics-and-limits.md](heuristics-and-limits.md): what `dynamic`, the object-scoped

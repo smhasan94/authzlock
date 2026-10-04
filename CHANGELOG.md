@@ -11,6 +11,9 @@ All notable changes to authzlock are recorded here. The format follows
 - `[tool.authzlock]` in `pyproject.toml` sets `settings`, `lockfile` and `fail_on` for
   `update`, `check` and `diff`. Flags and `DJANGO_SETTINGS_MODULE` still take precedence. See
   `docs/cli.md`.
+- `authzlock diff --format json` prints a machine-readable document (see
+  `docs/diff-json.md` and `docs/diff.schema.json`), and `--format sarif` a SARIF 2.1.0 log
+  for GitHub code scanning. Each change points at the file and line of its view.
 
 ## [0.1.0] - 2026-10-02
 

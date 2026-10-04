@@ -23,8 +23,10 @@ MVP tickets share the design decisions below so that tickets built in parallel f
 | `lockfile.py` | SHA-224 | `dump`, `load`, schema version 1 |
 | `diff.py` | SHA-228 | `compute(base, current) -> Diff` |
 | `classify.py` | SHA-229 | rules R1 to R8 |
-| `render.py` | SHA-230 | text and markdown output |
+| `render.py` | SHA-230, SHA-241 | text, markdown and JSON output |
 | `gitutil.py` | SHA-230 | read a file at a git ref |
+| `locate.py` | SHA-241 | source file and line of a view, for JSON and SARIF output |
+| `sarif.py` | SHA-241 | SARIF 2.1.0 output built from the JSON document |
 | `cli.py` | SHA-225, SHA-226, SHA-230 | Typer commands `update`, `check`, `diff` |
 
 ## Data model
