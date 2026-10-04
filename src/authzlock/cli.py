@@ -29,7 +29,8 @@ from authzlock.errors import (
     LockfileError,
     ProjectLoadError,
 )
-from authzlock.model import Inventory
+from authzlock.ignore import apply as apply_ignore
+from authzlock.model import IgnoreList, Inventory
 from authzlock.render import (
     DiffReport,
     build_report,
@@ -67,6 +68,30 @@ LockfileOption = Annotated[
         help="Path of the lockfile, relative to the current directory.",
         dir_okay=False,
     ),
+]
+IgnorePathOption = Annotated[
+    list[str] | None,
+    typer.Option(
+        "--ignore-path",
+        metavar="PREFIX",
+        help="Leave out routes whose URL pattern starts with PREFIX. Repeatable; replaces the "
+        "list recorded in the lockfile.",
+        show_default=False,
+    ),
+]
+IgnoreViewOption = Annotated[
+    list[str] | None,
+    typer.Option(
+        "--ignore-view",
+        metavar="PREFIX",
+        help="Leave out routes whose view is in module PREFIX. Repeatable; replaces the list "
+        "recorded in the lockfile.",
+        show_default=False,
+    ),
+]
+NoIgnoreOption = Annotated[
+    bool,
+    typer.Option("--no-ignore", help="Clear the ignore list recorded in the lockfile."),
 ]
 QuietOption = Annotated[
     bool,
@@ -228,17 +253,43 @@ def _write_if_changed(path: Path, text: str) -> bool:
     return True
 
 
+def _recorded_ignore(path: Path) -> IgnoreList:
+    """The ignore list of the lockfile at `path`; empty when the file is missing or unreadable,
+    since `update` is how such a file gets repaired."""
+    try:
+        return _load_lockfile(path).ignore if path.is_file() else IgnoreList()
+    except LockfileError:
+        return IgnoreList()
+
+
+def _ignore_for_update(
+    path: Path, paths: list[str] | None, views: list[str] | None, clear: bool
+) -> IgnoreList:
+    """The list `update` writes: cleared, replaced by the options, or kept from `path`."""
+    if clear and (paths or views):
+        _fail(AuthzlockError("--no-ignore cannot be combined with --ignore-path or --ignore-view."))
+    if clear:
+        return IgnoreList()
+    if paths or views:
+        return IgnoreList.of(paths or (), views or ())
+    return _recorded_ignore(path)
+
+
 @app.command()
 def update(
     ctx: typer.Context,
     settings: SettingsOption = None,
     lockfile_path: LockfileOption = DEFAULT_LOCKFILE,
+    ignore_path: IgnorePathOption = None,
+    ignore_view: IgnoreViewOption = None,
+    no_ignore: NoIgnoreOption = False,
     quiet: QuietOption = False,
 ) -> None:
     """Extract the project's access rules and write them to the lockfile."""
     options = _options_or_exit(ctx, settings, lockfile_path)
     lockfile_path = options.lockfile
-    inventory = _extract_or_exit(options)
+    ignore = _ignore_for_update(lockfile_path, ignore_path, ignore_view, no_ignore)
+    inventory = apply_ignore(_extract_or_exit(options), ignore)
     try:
         written = _write_if_changed(lockfile_path, lockfile.dump(inventory))
     except LockfileError as exc:
@@ -267,7 +318,7 @@ def check(
         base = _load_lockfile(lockfile_path)
     except LockfileError as exc:
         _fail(exc)
-    current = _extract_or_exit(options)
+    current = apply_ignore(_extract_or_exit(options), base.ignore)
     diff = compute_diff(base, current)
     if diff.is_empty:
         if not quiet:
@@ -333,14 +384,21 @@ def diff(
     options = _options_or_exit(ctx, settings, lockfile_path, fail_on)
     try:
         base_inventory, relative = _base_inventory(base, options.lockfile)
+        base_ignore = base_inventory.ignore if base_inventory is not None else IgnoreList()
+        # The working tree's list wins, so a pull request that changes it is diffed with it.
+        if options.lockfile.is_file():
+            ignore = _load_lockfile(options.lockfile).ignore
+        else:
+            ignore = base_ignore
     except AuthzlockError as exc:
         _fail(exc)
-    current = _extract_or_exit(options)
+    current = apply_ignore(_extract_or_exit(options), ignore)
     report = build_report(
         compute_diff(base_inventory or Inventory(), current),
         ref=base,
         lockfile=relative,
         base_found=base_inventory is not None,
+        ignore_changed=(base_ignore, ignore) if ignore != base_ignore else None,
     )
     if output_format in (OutputFormat.json, OutputFormat.sarif):
         # A machine-readable document is printed even with --quiet, so a redirect to a file

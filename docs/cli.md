@@ -99,6 +99,37 @@ authz.lock: 12 routes written
 Run `authzlock update` after changing views, URLs or permission settings, and commit the
 updated `authz.lock` with the change.
 
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--ignore-path PREFIX` | | Leave out routes whose URL pattern starts with `PREFIX`. Repeatable. |
+| `--ignore-view PREFIX` | | Leave out routes whose view is in module `PREFIX`. Repeatable. |
+| `--no-ignore` | off | Clear the recorded ignore list. Cannot be combined with the two options above. |
+
+### Ignoring routes
+
+Large projects may want the Django admin, the debug toolbar or static file routes out of
+the lockfile. The list is given once, on `update`, and recorded in the lockfile under
+`ignore` ([lockfile.md](lockfile.md#top-level-keys)), so `check`, `diff`, the pre-commit
+hooks and the GitHub Action all apply the same list without any option:
+
+```console
+$ authzlock update --ignore-path admin/ --ignore-path __debug__/ --ignore-view debug_toolbar
+```
+
+- A path prefix is compared literally with the route's URL pattern after one leading `^` is
+  stripped from each, so `admin/` also covers `re_path(r"^admin/...")`.
+- A view prefix matches on a module boundary: `shop.internal` leaves out `shop.internal`
+  and `shop.internal.views.StockView`, but not `shop.internal_api.views.status`.
+- `update` without `--ignore-path`, `--ignore-view` or `--no-ignore` keeps the list already
+  in the lockfile. Any `--ignore-path` or `--ignore-view` replaces the whole list;
+  `--no-ignore` clears it.
+- An ignored route also leaves every `used_by` list, and a custom permission used only by
+  ignored routes leaves `custom_permissions`.
+- `check` applies the lockfile's list to the fresh extraction. `diff --base` applies the
+  working tree's lockfile's list, or the base lockfile's when the working tree has none.
+  When the two lists differ, the output starts with one note line, and the routes the
+  change leaves out or brings back appear as `removed` or `added`.
+
 ## authzlock check
 
 Loads the project, extracts its access rules and compares them with the lockfile. This is

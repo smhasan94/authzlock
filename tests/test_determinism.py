@@ -23,7 +23,8 @@ from authzlock.lockfile import dump
 from authzlock.model import Inventory, Route
 from harness import FIXTURES, run_cli
 
-# Every fixture that is a complete project; `minimal` adds nothing and `broken` cannot load.
+# Every fixture that is a complete project; `minimal` adds nothing, `broken` cannot load and
+# `ignore_routes` mounts the Django admin, whose routes change between Django releases.
 DETERMINISM_FIXTURES = (
     "class_views",
     "drf_apiview",

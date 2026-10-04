@@ -199,7 +199,8 @@ shows what changed in review.
 - A3. A single lockfile per repository at the repository root is the common case.
 - A4. The lockfile records effective permission classes per route, not per HTTP method,
   except where DRF gives per-action classes (`@action`) which produce their own routes.
-- A5. Django's built-in admin routes are recorded like any other routes.
+- A5. Django's built-in admin routes are recorded like any other routes. `authzlock update
+  --ignore-path admin/` opts out (SHA-245).
 - A6. The GitHub Action runs inside the target repo's own workflow, where the project's
   dependencies are already installed.
 

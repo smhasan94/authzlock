@@ -30,7 +30,8 @@ ROUTE_FIELDS = (
     "django_auth",
     "object_scoping",
 )
-TOP_LEVEL = ("schema_version", "routes", "custom_permissions")
+TOP_LEVEL = ("schema_version", "ignore", "routes", "custom_permissions")
+IGNORE_KEYS = ("paths", "views")
 _DYNAMIC = "dynamic"
 # Lists whose order carries no meaning; they are sorted wherever they appear.
 _ORDER_FREE = frozenset(
@@ -62,8 +63,10 @@ def dump(inventory: Inventory) -> str:
     data = inventory.to_dict()
     _reject_absolute_paths(data)
     routes = sorted(data["routes"], key=lambda route: (route["path"], route["view"]))
-    document = {
-        "schema_version": data["schema_version"],
+    document: dict[str, Any] = {"schema_version": data["schema_version"]}
+    if "ignore" in data:
+        document["ignore"] = {key: sorted(set(data["ignore"][key])) for key in data["ignore"]}
+    document |= {
         "routes": [{key: _normalise(key, route[key]) for key in ROUTE_FIELDS} for route in routes],
         "custom_permissions": {
             name: _normalise(name, data["custom_permissions"][name])
@@ -89,6 +92,8 @@ def _reject_absolute_paths(data: Mapping[str, Any]) -> None:
     for name, entry in data["custom_permissions"].items():
         _check_value(name, f"custom_permissions.{name}", "")
         _check_value(entry, f"custom_permissions.{name}", "")
+    # Ignored paths are URL prefixes, free text like a route path; view prefixes are dotted.
+    _check_value(data.get("ignore", {}).get("views"), "ignore.views", "views")
 
 
 def _check_value(value: Any, where: str, key: str) -> None:
@@ -144,6 +149,8 @@ def _validate(data: Any) -> None:
     for key in data:
         if key not in TOP_LEVEL:
             raise LockfileError(f"unknown top-level key: {key}")
+    if "ignore" in data:
+        _validate_ignore(data["ignore"])
     if "routes" not in data:
         raise LockfileError("missing required key: routes")
     routes = data["routes"]
@@ -157,6 +164,21 @@ def _validate(data: Any) -> None:
     for name, entry in permissions.items():
         if not isinstance(entry, dict):
             raise LockfileError(f"custom_permissions.{name}: expected a mapping")
+
+
+def _validate_ignore(ignore: Any) -> None:
+    if not isinstance(ignore, dict):
+        raise LockfileError("ignore: expected a mapping with paths and/or views")
+    for key, value in ignore.items():
+        if key not in IGNORE_KEYS:
+            raise LockfileError(f"ignore: unknown key {key}")
+        if not isinstance(value, list):
+            raise LockfileError(f"ignore.{key}: expected a list of strings, got {value!r}")
+        for index, item in enumerate(value):
+            if not isinstance(item, str) or not item:
+                raise LockfileError(
+                    f"ignore.{key}[{index}]: expected a non-empty string, got {item!r}"
+                )
 
 
 def _validate_route(route: Any, where: str) -> None:

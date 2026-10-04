@@ -70,16 +70,45 @@ class Route:
 
 
 @dataclass(frozen=True)
+class IgnoreList:
+    """Path prefixes and view module prefixes left out of the lockfile; see `ignore.py`."""
+
+    paths: tuple[str, ...] = ()
+    views: tuple[str, ...] = ()
+
+    @classmethod
+    def of(cls, paths: Sequence[str] = (), views: Sequence[str] = ()) -> IgnoreList:
+        """A list with `paths` and `views` sorted and deduplicated."""
+        return cls(tuple(sorted(set(paths))), tuple(sorted(set(views))))
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.paths and not self.views
+
+    def to_dict(self) -> dict[str, list[str]]:
+        """Only the non-empty lists, `paths` first."""
+        data = {"paths": list(self.paths), "views": list(self.views)}
+        return {key: value for key, value in data.items() if value}
+
+
+@dataclass(frozen=True)
 class Inventory:
-    """Everything extraction found in one project."""
+    """Everything extraction found in one project.
+
+    `ignore` is the list `update` recorded; extraction itself never sets it.
+    """
 
     schema_version: int = SCHEMA_VERSION
     routes: tuple[Route, ...] = ()
     custom_permissions: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    ignore: IgnoreList = field(default_factory=IgnoreList)
 
     def to_dict(self) -> dict[str, Any]:
+        """The lockfile document; `ignore` is present only when the list is not empty."""
+        ignore = {} if self.ignore.is_empty else {"ignore": self.ignore.to_dict()}
         return {
             "schema_version": self.schema_version,
+            **ignore,
             "routes": [route.to_dict() for route in self.routes],
             "custom_permissions": {
                 name: dict(self.custom_permissions[name])
@@ -90,8 +119,10 @@ class Inventory:
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Inventory:
         routes: Sequence[Mapping[str, Any]] = data.get("routes", ())
+        ignore: Mapping[str, Sequence[str]] = data.get("ignore") or {}
         return cls(
             schema_version=int(data["schema_version"]),
             routes=tuple(Route.from_dict(route) for route in routes),
             custom_permissions=dict(data.get("custom_permissions", {})),
+            ignore=IgnoreList.of(ignore.get("paths", ()), ignore.get("views", ())),
         )

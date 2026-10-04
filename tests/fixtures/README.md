@@ -38,6 +38,10 @@ release genuinely builds different routes, a version-specific file takes precede
 Today the only one is `drf_viewsets/authz.lock.drf-3.14.expected`, because DRF 3.14's
 `DefaultRouter` writes its root and format-suffix routes as regexes.
 
+`ignore_routes` mounts the Django admin for the ignore list tests (SHA-245) and has no golden
+file: the admin's routes change between Django releases, so its tests compare a filtered run
+with an unfiltered one instead.
+
 After an intended change to extraction or the lockfile format, regenerate them with
 `pytest tests/test_determinism.py -k t5 --update-golden` (and, for a version-specific file,
 the same command inside the matching nox session, for example
