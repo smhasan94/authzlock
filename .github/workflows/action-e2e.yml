@@ -29,7 +29,7 @@ concurrency:
 
 env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  EXPECTED_SUMMARY: "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+  EXPECTED_SUMMARY: "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
 
 jobs:
   loosened:
@@ -58,7 +58,7 @@ jobs:
           REPORT: ${{ steps.authzlock.outputs.report-path }}
         run: >-
           python scripts/ci/assert_summary.py "$REPORT"
-          --summary "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+          --summary "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
           --row loosened --row-contains DELETE
           --row-contains billing.views.InvoiceDetailView
 
@@ -88,7 +88,7 @@ jobs:
           REPORT: ${{ steps.authzlock.outputs.report-path }}
         run: >-
           python scripts/ci/assert_summary.py "$REPORT"
-          --summary "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown"
+          --summary "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
           --contains "no access-control changes"
 
   fails-when-loosened:

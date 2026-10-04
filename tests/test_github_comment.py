@@ -246,7 +246,8 @@ def test_t3_empty_diff_posts_no_changes_message(
     assert comment["body"].startswith(MARKDOWN_MARKER)
     # The CLI writes "No access-control changes against `origin/main`." as a sentence.
     assert "no access-control changes" in comment["body"].lower()
-    assert "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown" in comment["body"]
+    clean = "0 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
+    assert clean in comment["body"]
 
     # An empty report file (nothing captured) gets the same message rather than a blank comment.
     result = _upsert(run_github, _write(tmp_path, "blank.md", ""))
@@ -362,7 +363,8 @@ def test_extra_outputs_written_to_github_output(tmp_path: Path, run_github: RunG
 
     assert result.returncode == 0, result.stderr
     lines = output.read_text(encoding="utf-8").splitlines()
-    assert "summary=1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown" in lines
+    summary = "1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent"
+    assert f"summary={summary}" in lines
     assert "loosened=1" in lines
 
 

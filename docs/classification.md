@@ -2,9 +2,9 @@
 
 `authzlock diff` labels every route that differs between two inventories. A route only in
 the current inventory is `added`, a route only in the base is `removed`, and a route on both
-sides whose fields differ is classified by the rules below as `loosened`, `tightened` or
-`changed-unknown`. The rules were agreed on 2026-09-29 and live in
-`src/authzlock/classify.py`.
+sides whose fields differ is classified by the rules below as `loosened`, `tightened`,
+`changed-unknown` or `equivalent`. Rules R1 to R8 were agreed on 2026-09-29, R9 was added by
+SHA-239, and they live in `src/authzlock/classify.py`.
 
 A false `loosened` alarm is worse than `changed-unknown`, so the rules are conservative:
 authzlock never guesses what a custom, third-party, composed or `dynamic` permission does.
@@ -34,9 +34,29 @@ Every other permission entry is unranked: custom classes (any module other than
 Composed expressions such as `(a.IsAuthenticated | b.IsOwner)` and the `dynamic` sentinel
 are never ranked.
 
+## Per-method permissions
+
+Two DRF built-ins mean different things for different HTTP methods.
+`IsAuthenticatedOrReadOnly` allows anyone on the safe methods GET, HEAD and OPTIONS and
+requires authentication on every other method; `DjangoModelPermissionsOrAnonReadOnly`
+allows anyone on the safe methods and requires `DjangoModelPermissions` on every other.
+Rule R9 rewrites each side of a change into one permission list per method of the route,
+replacing those two classes by what they mean for that method and dropping `AllowAny` from
+any list that has other members, and classifies each method's pair with R1 to R8. The
+route gets the most severe per-method label, and the reason names the method that decided
+it, for example `R9: POST [rest_framework.permissions.DjangoModelPermissions] ->
+[rest_framework.permissions.IsAuthenticated] (R2: ...)`. When the lists differ but no
+method's effective list does, the route is `equivalent`: the change has no effect on who
+may call it. `equivalent` never fails `diff --fail-on loosened`, but `check` still reports
+the route, because the lockfile no longer matches.
+
+The expansion happens only during classification; the lockfile keeps one list per route.
+Custom, third-party and composed classes and `dynamic` are copied unchanged, so they stay
+as opaque as under R1 to R8, and `DjangoModelPermissions` stays unranked.
+
 ## Rules
 
-The rules run in order and the first one that applies decides. R1 to R4 apply only when
+The rules run in order and the first one that applies decides; R9 runs first. R1 to R4 apply only when
 `permission_classes` is the one access field that changed and both sides are plain lists of
 classes (no `dynamic`, no composed expression, not null). The fields `name`,
 `permission_source` and `authentication_source` say where a rule came from, not who may call
@@ -45,6 +65,7 @@ reason starts with that id.
 
 | Rule | Applies when | Label | Example |
 |------|--------------|-------|---------|
+| R9 | `permission_classes` changed, either side holds `IsAuthenticatedOrReadOnly` or `DjangoModelPermissionsOrAnonReadOnly`, and `methods` is not `any` | The most severe per-method result of R1 to R8 (`loosened`, then `changed-unknown`, then `tightened`); `equivalent` when no method's effective permissions changed | `[IsAuthenticated]` to `[IsAuthenticatedOrReadOnly]` on a POST-only route is `equivalent` |
 | R1 | Both lists hold only ranked built-ins and the strongest class differs | `loosened` if the strongest class is weaker, `tightened` if stronger | `[IsAuthenticated]` to `[AllowAny]` is `loosened` |
 | R2 | An unranked class is removed, the new list holds no unranked class, and the new strongest built-in is at most `IsAuthenticated` or at most the old strongest built-in | `loosened` | `[shop.permissions.IsOwner]` to `[IsAuthenticated]` is `loosened` |
 | R3 | An unranked class is replaced by another unranked class, or by `IsAdminUser` | `changed-unknown` | `[shop.permissions.IsOwner]` to `[IsAdminUser]` is `changed-unknown` |
@@ -74,6 +95,13 @@ the reasons always use full dotted paths.
   `[shop.view_order]` gives `loosened`.
 - R7: a ViewSet route that gains `PUT` with the same permissions gives `changed-unknown`:
   the permissions did not change, but a new method is reachable.
+- R9: `[IsAuthenticated]` to `[IsAuthenticatedOrReadOnly]` on a POST-only action gives
+  `equivalent`: POST still requires authentication. `[AllowAny]` to
+  `[IsAuthenticatedOrReadOnly]` gives `equivalent` on a GET-only route and `tightened` on a
+  GET and POST route, with the reason naming POST.
+  `[DjangoModelPermissionsOrAnonReadOnly]` to `[IsAuthenticated]` on a GET and POST route
+  gives `loosened`: GET goes from anyone to authenticated users, but POST goes from model
+  permissions to any authenticated user, and R2 calls that loosened.
 - R8: any change that touches a composed expression, `authentication_classes`,
   `object_scoping`, or more than one kind of access field at once gives `changed-unknown`.
 

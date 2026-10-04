@@ -27,7 +27,8 @@ IS_AUTHENTICATED = "rest_framework.permissions.IsAuthenticated"
 ORIGINAL = "    permission_classes = [IsAuthenticated, IsOwner]\n"
 LOOSENED = "    permission_classes = [IsAuthenticated]\n"
 SUMMARY = re.compile(
-    r"^(\d+) loosened, (\d+) tightened, (\d+) added, (\d+) removed, (\d+) changed-unknown$",
+    r"^(\d+) loosened, (\d+) tightened, (\d+) added, (\d+) removed, (\d+) changed-unknown"
+    r", (\d+) equivalent$",
     re.MULTILINE,
 )
 DOC = Path(__file__).resolve().parent.parent / "docs" / "scenario.md"
@@ -83,7 +84,7 @@ def test_t1_loosening_patch_yields_loosened_row_with_r2(loosened_repo: Path) -> 
 
     assert result.returncode == EXIT_MISMATCH, result.stdout + result.stderr
     assert result.stdout.startswith("<!-- authzlock -->\n")
-    assert _summary(result.stdout) == (1, 0, 0, 0, 0)
+    assert _summary(result.stdout) == (1, 0, 0, 0, 0, 0)
     rows = _rows(result.stdout, "loosened")
     assert len(rows) == 1, result.stdout
     row = rows[0]
@@ -139,7 +140,7 @@ def test_t5_reverse_patch_is_tightened(loosened_repo: Path) -> None:
     markdown = _diff(loosened_repo, "--format", "markdown")
 
     assert text.returncode == EXIT_MISMATCH, text.stdout + text.stderr
-    assert _summary(text.stdout) == (0, 1, 0, 0, 0)
+    assert _summary(text.stdout) == (0, 1, 0, 0, 0, 0)
     tightened = [line for line in text.stdout.splitlines() if line.startswith("tightened")]
     assert len(tightened) == 1, text.stdout
     assert ROUTE_KEY in tightened[0]
@@ -163,7 +164,7 @@ def test_t7_custom_swap_is_changed_unknown_never_loosened(tmp_path: Path) -> Non
     text = _diff(repo)
 
     assert markdown.returncode == EXIT_MISMATCH, markdown.stdout + markdown.stderr
-    assert _summary(markdown.stdout) == (0, 0, 0, 0, 1)
+    assert _summary(markdown.stdout) == (0, 0, 0, 0, 1, 0)
     assert not _rows(markdown.stdout, "loosened")
     rows = _rows(markdown.stdout, "changed-unknown")
     assert len(rows) == 1, markdown.stdout

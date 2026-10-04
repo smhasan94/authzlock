@@ -77,7 +77,7 @@ change):
 <!-- authzlock -->
 ### authzlock: access-control changes
 
-1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown
+1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent
 
 | Change | Methods | Path | View | Details |
 |---|---|---|---|---|
@@ -99,7 +99,7 @@ class was removed and what is left is at most `IsAuthenticated`. authzlock canno
 `IsOwner` checked, but it knows the remaining list no longer contains it. The collapsed
 section records that no route uses `IsOwner` any more, so it leaves the custom permission
 registry; registry changes are not counted in the summary line. The summary line
-is `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown`; the exit code is 1,
+is `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent`; the exit code is 1,
 with the default `--fail-on any` and with `--fail-on loosened`, so the pull request check
 fails.
 

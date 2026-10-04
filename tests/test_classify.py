@@ -1,4 +1,4 @@
-"""Tests for SHA-229: classification rules loosened, tightened and changed-unknown."""
+"""Tests for SHA-229 and SHA-239: classification rules R1 to R9."""
 
 from __future__ import annotations
 
@@ -14,12 +14,14 @@ from authzlock.classify import (
     BUILTIN_RANK,
     DJANGO_AUTH_RANK,
     LABELS,
+    MVP_RULES,
     RULES,
     Classification,
     classify,
     classify_diff,
 )
 from authzlock.diff import RouteChange, compute, route_changes
+from authzlock.effective import expand_for
 from authzlock.model import Inventory, Route
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -105,7 +107,8 @@ def test_t1_builtin_weaker_is_loosened(old: list[str], new: list[str]) -> None:
     result = perms(old, new)
 
     assert result.label == "loosened"
-    assert result.rule == "R1"
+    # IsAuthenticatedOrReadOnly is decided per method by R9, which quotes the R1 result.
+    assert result.rule == ("R9" if READ_ONLY in old + new else "R1")
     assert "R1" in result.reason
 
 
@@ -121,7 +124,8 @@ def test_t2_builtin_stronger_is_tightened(old: list[str], new: list[str]) -> Non
     result = perms(old, new)
 
     assert result.label == "tightened"
-    assert result.rule == "R1"
+    assert result.rule == ("R9" if READ_ONLY in old + new else "R1")
+    assert "R1" in result.reason
 
 
 @pytest.mark.parametrize("new", [[IS_AUTHENTICATED], [READ_ONLY], [ALLOW_ANY], []])
@@ -129,7 +133,7 @@ def test_t3_custom_replaced_by_builtin_at_most_is_authenticated_is_loosened(new:
     result = perms([IS_OWNER], new)
 
     assert result.label == "loosened"
-    assert result.rule == "R2"
+    assert result.rule == ("R9" if READ_ONLY in new else "R2")
     assert "R2" in result.reason
     assert IS_OWNER in result.reason
 
@@ -249,7 +253,7 @@ def test_t11_docs_list_every_rule() -> None:
         for match in re.finditer(r"^\|\s*(R\d+)\s*\|.*\|\s*$", text, flags=re.MULTILINE)
     }
 
-    for number in range(1, 9):
+    for number in range(1, 10):
         rule_id = f"R{number}"
         assert rule_id in rows, f"{rule_id} has no row in docs/classification.md"
         cells = [cell.strip() for cell in rows[rule_id].strip().strip("|").split("|")]
@@ -309,9 +313,16 @@ def test_extra_ranking_tables() -> None:
 
 
 def test_extra_rules_table_is_ordered_and_ends_with_catch_all() -> None:
-    assert [rule.id for rule in RULES] == [f"R{n}" for n in range(1, 9)]
+    assert [rule.id for rule in RULES] == ["R9", *(f"R{n}" for n in range(1, 9))]
     assert all(rule.summary for rule in RULES)
-    assert LABELS == ("added", "removed", "loosened", "tightened", "changed-unknown")
+    assert LABELS == (
+        "added",
+        "removed",
+        "loosened",
+        "tightened",
+        "changed-unknown",
+        "equivalent",
+    )
 
 
 def test_extra_permission_required_gaining_and_losing_entries() -> None:
@@ -363,7 +374,6 @@ def test_extra_methods_gaining_entries_is_unknown() -> None:
         dataclasses.replace(API, authentication_classes=()),
         dataclasses.replace(API, permission_classes=(ALLOW_ANY,), methods=("GET",)),
         dataclasses.replace(API, methods=("GET",)),
-        dataclasses.replace(API, permission_classes=(IS_AUTHENTICATED, READ_ONLY)),
         dataclasses.replace(API, name="api:order"),
         dataclasses.replace(API, permission_classes=None),
     ],
@@ -390,3 +400,160 @@ def test_extra_classify_diff_labels_added_removed_and_changed() -> None:
     assert by_label["loosened"].classification.rule == "R1"
     assert by_label["added"].classification.rule is None
     assert [entry.key for entry in entries] == sorted(entry.key for entry in entries)
+
+
+# SHA-239: R9, per-method effective permissions ---------------------------------------------
+
+ANON_READ_ONLY = f"{DRF}.DjangoModelPermissionsOrAnonReadOnly"
+
+
+def perms_on(methods: tuple[str, ...], old: Any, new: Any) -> Classification:
+    """Classify a DRF route serving `methods` whose permission_classes go from old to new."""
+    route = dataclasses.replace(API, methods=methods, actions={})
+    return classify(
+        change(
+            dataclasses.replace(route, permission_classes=_class_list(old)),
+            dataclasses.replace(route, permission_classes=_class_list(new)),
+        )
+    )
+
+
+def test_t3_post_only_route_is_equivalent() -> None:
+    result = perms_on(("POST",), [IS_AUTHENTICATED], [READ_ONLY])
+
+    assert (result.label, result.rule) == ("equivalent", "R9")
+    assert result.reason.startswith("R9: ")
+
+
+def test_t4_read_only_route_equivalent_and_mixed_route_tightened_names_post() -> None:
+    read_only = perms_on(("GET",), [ALLOW_ANY], [READ_ONLY])
+    mixed = perms_on(("GET", "POST"), [ALLOW_ANY], [READ_ONLY])
+
+    assert (read_only.label, read_only.rule) == ("equivalent", "R9")
+    assert (mixed.label, mixed.rule) == ("tightened", "R9")
+    assert mixed.reason.startswith(f"R9: POST [{ALLOW_ANY}] -> [{IS_AUTHENTICATED}]")
+
+
+def test_t5_anon_read_only_to_is_authenticated_is_loosened_on_post() -> None:
+    result = perms_on(("GET", "POST"), [ANON_READ_ONLY], [IS_AUTHENTICATED])
+
+    assert (result.label, result.rule) == ("loosened", "R9")
+    assert result.reason.startswith(f"R9: POST [{MODEL_PERMS}] -> [{IS_AUTHENTICATED}]")
+    assert "R2" in result.reason
+
+
+def test_t6_custom_and_composed_classes_stay_opaque() -> None:
+    dropped_owner = perms_on(("GET", "POST"), [READ_ONLY, IS_OWNER], [IS_AUTHENTICATED])
+    composed_old = (f"({READ_ONLY} | {IS_OWNER})",)
+    composed = perms_on(("GET", "POST"), composed_old, [IS_AUTHENTICATED])
+
+    assert (dropped_owner.label, dropped_owner.rule) == ("loosened", "R9")
+    mvp = classify(
+        change(
+            dataclasses.replace(API, methods=("GET", "POST"), permission_classes=composed_old),
+            dataclasses.replace(
+                API, methods=("GET", "POST"), permission_classes=(IS_AUTHENTICATED,)
+            ),
+        ),
+        MVP_RULES,
+    )
+    assert (composed.label, composed.rule) == (mvp.label, mvp.rule) == ("changed-unknown", "R8")
+
+
+@pytest.mark.parametrize(
+    ("methods", "old", "new"),
+    [
+        (("any",), [IS_AUTHENTICATED], [READ_ONLY]),
+        (("GET", "POST"), "dynamic", [READ_ONLY]),
+        (("GET", "POST"), [READ_ONLY], "dynamic"),
+    ],
+)
+def test_t7_any_methods_or_dynamic_skip_r9(methods: tuple[str, ...], old: Any, new: Any) -> None:
+    route = dataclasses.replace(API, methods=methods, actions={})
+    pair = change(
+        dataclasses.replace(route, permission_classes=_class_list(old)),
+        dataclasses.replace(route, permission_classes=_class_list(new)),
+    )
+
+    result = classify(pair)
+
+    assert result.rule != "R9"
+    assert result == classify(pair, MVP_RULES)
+
+
+# The universe for T8: the ranked built-ins, the two expandable classes (IsAuthenticated-
+# OrReadOnly is both), two custom classes and dynamic.
+_R9_UNIVERSE = (
+    ALLOW_ANY,
+    READ_ONLY,
+    IS_AUTHENTICATED,
+    IS_ADMIN,
+    ANON_READ_ONLY,
+    IS_OWNER,
+    IS_TENANT_ADMIN,
+)
+_R9_VALUES: list[Any] = [
+    tuple(combo) for size in range(4) for combo in itertools.combinations(_R9_UNIVERSE, size)
+] + ["dynamic"]
+_EXPANDABLE = {READ_ONLY, ANON_READ_ONLY}
+_CUSTOM = {IS_OWNER, IS_TENANT_ADMIN}
+
+
+def _expected_r9_label(old: Any, new: Any, methods: tuple[str, ...]) -> str:
+    """AC4 restated: the most severe per-method R1 to R8 label, or equivalent."""
+    labels = []
+    for method in methods:
+        before, after = expand_for(old, method), expand_for(new, method)
+        if before != after:
+            pair = change(
+                dataclasses.replace(API, methods=(method,), permission_classes=before),
+                dataclasses.replace(API, methods=(method,), permission_classes=after),
+            )
+            labels.append(classify(pair, MVP_RULES).label)
+    for label in ("loosened", "changed-unknown", "tightened"):
+        if label in labels:
+            return label
+    return "equivalent"
+
+
+@pytest.mark.parametrize("methods", [("GET",), ("POST",), ("GET", "POST")])
+def test_t8_exhaustive_never_loosened_with_new_custom_and_matches_mvp_without_expansion(
+    methods: tuple[str, ...],
+) -> None:
+    route = dataclasses.replace(API, methods=methods, actions={})
+    checked = 0
+    for old, new in itertools.product(_R9_VALUES, repeat=2):
+        if old == new:
+            continue
+        pair = change(
+            dataclasses.replace(route, permission_classes=old),
+            dataclasses.replace(route, permission_classes=new),
+        )
+        result = classify(pair)
+        if isinstance(new, tuple) and _CUSTOM & set(new):
+            assert result.label != "loosened", (old, new, result)
+        sides = [side for side in (old, new) if isinstance(side, tuple)]
+        if not any(_EXPANDABLE & set(side) for side in sides):
+            assert result == classify(pair, MVP_RULES), (old, new)
+        if result.label == "equivalent":
+            assert any(_EXPANDABLE & set(side) for side in sides), (old, new)
+        if result.rule == "R9":
+            assert result.label == _expected_r9_label(old, new, methods), (old, new, result)
+        checked += 1
+    assert checked > 4000
+
+
+def _rule_ids(text: str) -> list[str]:
+    return re.findall(r"^\|\s*(R\d+)\s*\|", text, flags=re.MULTILINE)
+
+
+def test_t10_docs_and_readme_list_r9_and_equivalent() -> None:
+    docs = (REPO_ROOT / "docs" / "classification.md").read_text(encoding="utf-8")
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert _rule_ids(docs) == _rule_ids(readme) == [rule.id for rule in RULES]
+    for text in (docs, readme):
+        r9 = next(line for line in text.splitlines() if line.startswith("| R9 |"))
+        assert "`equivalent`" in r9
+        assert "IsAuthenticatedOrReadOnly" in r9
+        assert "DjangoModelPermissionsOrAnonReadOnly" in r9

@@ -72,7 +72,7 @@ loosened        POST ^invoices/(?P<pk>[^/.]+)/archive/$ -> billing.views.Invoice
 loosened        POST ^invoices/(?P<pk>[^/.]+)/archive\.(?P<format>[a-z0-9]+)/?$ -> billing.views.InvoiceViewSet  permission_classes: [rest_framework.permissions.IsAdminUser] -> [rest_framework.permissions.IsAuthenticated]  (R1: strongest built-in rest_framework.permissions.IsAdminUser -> rest_framework.permissions.IsAuthenticated)
 loosened        POST v2/^invoices/(?P<pk>[^/.]+)/archive/$ -> billing.views.InvoiceViewSet  permission_classes: [rest_framework.permissions.IsAdminUser] -> [rest_framework.permissions.IsAuthenticated]  (R1: strongest built-in rest_framework.permissions.IsAdminUser -> rest_framework.permissions.IsAuthenticated)
 
-3 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown
+3 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent
 ```
 <!-- readme-diff:end -->
 
@@ -162,7 +162,7 @@ routes that use them. [docs/lockfile.md](docs/lockfile.md) describes every key.
 ## How changes are classified
 
 `authzlock diff` gives every route that differs one label: `added`, `removed`, `loosened`,
-`tightened` or `changed-unknown`. For a route on both sides, the rules below run in order and
+`tightened`, `changed-unknown` or `equivalent`. For a route on both sides, the rules below run in order and
 the first that applies decides. Only DRF's built-in classes are ranked (`AllowAny` <
 `IsAuthenticatedOrReadOnly` < `IsAuthenticated` < `IsAdminUser`), and Django decorators
 (none < `login_required` < `permission_required`). A false `loosened` alarm is worse than
@@ -171,6 +171,7 @@ permission does.
 
 | Rule | Applies when | Label | Example |
 |------|--------------|-------|---------|
+| R9 | `permission_classes` changed, either side holds `IsAuthenticatedOrReadOnly` or `DjangoModelPermissionsOrAnonReadOnly`, and `methods` is not `any` | The most severe per-method result of R1 to R8 (`loosened`, then `changed-unknown`, then `tightened`); `equivalent` when no method's effective permissions changed | `[IsAuthenticated]` to `[IsAuthenticatedOrReadOnly]` on a POST-only route is `equivalent` |
 | R1 | Both lists hold only ranked built-ins and the strongest class differs | `loosened` if the strongest class is weaker, `tightened` if stronger | `[IsAuthenticated]` to `[AllowAny]` is `loosened` |
 | R2 | An unranked class is removed, the new list holds no unranked class, and the new strongest built-in is at most `IsAuthenticated` or at most the old strongest built-in | `loosened` | `[shop.permissions.IsOwner]` to `[IsAuthenticated]` is `loosened` |
 | R3 | An unranked class is replaced by another unranked class, or by `IsAdminUser` | `changed-unknown` | `[shop.permissions.IsOwner]` to `[IsAdminUser]` is `changed-unknown` |
@@ -180,7 +181,9 @@ permission does.
 | R7 | Only `methods` (and `actions`) changed and `methods` gained entries | `changed-unknown` | `[DELETE, GET]` to `[DELETE, GET, PUT]` is `changed-unknown` |
 | R8 | Anything else | `changed-unknown` | `[(IsAuthenticated \| shop.permissions.IsOwner)]` to `[IsAuthenticated]` is `changed-unknown` |
 
-R1 to R4 apply only when `permission_classes` is the one access field that changed.
+R9 runs first and judges `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly`
+per HTTP method; `equivalent` means the list changed but no method's effective rule did. R1
+to R4 apply only when `permission_classes` is the one access field that changed.
 [docs/classification.md](docs/classification.md) has the full rules, examples and the
 cases that are `changed-unknown` on purpose.
 
@@ -282,7 +285,7 @@ Django 4.2 does not support Python 3.13, and Django 6.0 and newer need Python 3.
 
 - [docs/cli.md](docs/cli.md): commands, options, output formats and exit codes.
 - [docs/lockfile.md](docs/lockfile.md): the lockfile format and its stability guarantees.
-- [docs/classification.md](docs/classification.md): the rules R1 to R8.
+- [docs/classification.md](docs/classification.md): the rules R1 to R9.
 - [docs/heuristics-and-limits.md](docs/heuristics-and-limits.md): what the heuristics can
   and cannot tell you, and what a green `check` does not prove.
 - [docs/scenario.md](docs/scenario.md): a pull request that drops `IsOwner`, end to end.
