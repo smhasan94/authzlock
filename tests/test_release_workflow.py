@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -86,7 +87,7 @@ def test_t4_changelog_and_releasing_docs(repo_root: Path) -> None:
 def test_t5_release_triggers_only_on_version_tags(release: dict[str, Any]) -> None:
     triggers = _triggers(release)
     assert set(triggers) == {"push", "workflow_dispatch"}
-    assert triggers["push"] == {"tags": ["v*"]}
+    assert triggers["push"] == {"tags": ["v*.*.*"]}
     target = triggers["workflow_dispatch"]["inputs"]["target"]
     assert target["default"] == "testpypi"
     assert target["options"] == ["testpypi", "pypi"]
@@ -101,3 +102,26 @@ def test_extra_build_checks_version_before_upload(release: dict[str, Any]) -> No
     check = names.index("Check the tag matches the package version")
     upload = names.index("Upload the distributions")
     assert check < upload
+
+
+def _github_filter(pattern: str) -> re.Pattern[str]:
+    """A GitHub Actions tag filter as a regex: `*` is any run of characters except `/`."""
+    return re.compile("".join("[^/]*" if c == "*" else re.escape(c) for c in pattern) + r"\Z")
+
+
+@pytest.mark.parametrize(
+    ("tag", "runs"),
+    [
+        ("v0.2.0", True),
+        ("v0.1.0rc1", True),
+        ("v10.20.30", True),
+        ("v1", False),
+        ("v2", False),
+        ("latest", False),
+    ],
+)
+def test_t1_tag_filter_matches_version_tags_not_the_action_tag(
+    release: dict[str, Any], tag: str, runs: bool
+) -> None:
+    patterns = [_github_filter(pattern) for pattern in _triggers(release)["push"]["tags"]]
+    assert any(pattern.match(tag) for pattern in patterns) is runs

@@ -1,12 +1,13 @@
 name: Release
 
-# A pushed `v*` tag publishes to PyPI. A manual dispatch publishes to TestPyPI by default
+# A pushed version tag (`v*.*.*`, such as v0.2.0 or v0.1.0rc1) publishes to PyPI; the `v1`
+# Action tag does not match, so moving it starts no run. A manual dispatch publishes to TestPyPI by default
 # (a dry run) or to PyPI when `target` is `pypi`. Publishing uses trusted publishing, so no
 # token is stored anywhere; see docs/releasing.md for the one-time setup.
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       target:

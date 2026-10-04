@@ -1,6 +1,8 @@
 # Releasing authzlock
 
-Releases are published to PyPI by `.github/workflows/release.yml` when a `v*` tag is pushed.
+Releases are published to PyPI by `.github/workflows/release.yml` when a version tag
+(`v*.*.*`, such as `v0.2.0` or `v0.1.0rc1`) is pushed. The `v1` Action tag does not match,
+so moving it starts no run.
 The workflow uses trusted publishing, so no API token is stored in GitHub. A manual run of
 the same workflow publishes to TestPyPI instead, as a dry run.
 
@@ -14,7 +16,7 @@ Only the repository owner can do this, and it must be done before the first publ
 2. On [TestPyPI](https://test.pypi.org/manage/account/publishing/), add the same publisher
    with environment `testpypi`.
 3. In the GitHub repository settings, under Environments, create `pypi` and `testpypi`.
-   For `pypi`, limit deployments to tags matching `v*` and, if you want a final check,
+   For `pypi`, limit deployments to tags matching `v*.*.*` and, if you want a final check,
    add yourself as a required reviewer.
 
 ## Release steps
