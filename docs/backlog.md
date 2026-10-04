@@ -105,7 +105,7 @@ Not scheduled. Placeholders only; they get the full template when pulled into an
 | SHA-238 | Later: [tool.authzlock] config in pyproject.toml | 1 | SHA-225, SHA-230 |
 | SHA-239 | Later: per-method effective permissions | - | none |
 | SHA-241 | Later: JSON and SARIF output for diff | - | none |
-| SHA-243 | Later: FastAPI extraction | - | none |
+| SHA-243 | Later: FastAPI extraction | 3 | SHA-211, SHA-230 |
 | SHA-244 | Later: generate pytest cases from the lockfile | - | SHA-225, SHA-227, SHA-229 |
 | SHA-245 | Later: ignore list for routes | - | SHA-211, SHA-230 |
 

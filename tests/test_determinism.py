@@ -21,7 +21,7 @@ from authzlock import __version__
 from authzlock.errors import EXIT_OK, LockfileError
 from authzlock.lockfile import dump
 from authzlock.model import Inventory, Route
-from harness import FIXTURES, run_cli
+from harness import FIXTURES, project_vars, run_cli
 
 # Every fixture that is a complete project; `minimal` adds nothing, `broken` cannot load and
 # `ignore_routes` mounts the Django admin, whose routes change between Django releases.
@@ -29,6 +29,7 @@ DETERMINISM_FIXTURES = (
     "class_views",
     "drf_apiview",
     "drf_viewsets",
+    "fastapi_basic",
     "function_views",
     "scenario_loosen",
 )
@@ -117,7 +118,7 @@ def test_t3_fixture_location_does_not_matter(fixture: str, tmp_path: Path) -> No
         outputs.append(
             _update(
                 project,
-                env={"PYTHONPATH": str(project), "DJANGO_SETTINGS_MODULE": "settings"},
+                env={"PYTHONPATH": str(project), **project_vars(project)},
             )
         )
 

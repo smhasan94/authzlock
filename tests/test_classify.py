@@ -313,7 +313,7 @@ def test_extra_ranking_tables() -> None:
 
 
 def test_extra_rules_table_is_ordered_and_ends_with_catch_all() -> None:
-    assert [rule.id for rule in RULES] == ["R9", *(f"R{n}" for n in range(1, 9))]
+    assert [rule.id for rule in RULES] == ["R10", "R9", *(f"R{n}" for n in range(1, 9))]
     assert all(rule.summary for rule in RULES)
     assert LABELS == (
         "added",

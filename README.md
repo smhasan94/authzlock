@@ -3,7 +3,7 @@
 [![CI](https://github.com/smhasan94/authzlock/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/smhasan94/authzlock/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/authzlock.svg)](https://pypi.org/project/authzlock/)
 
-An authorization lockfile for Django and Django REST Framework.
+An authorization lockfile for Django, Django REST Framework and FastAPI.
 
 In a Django project, the rules for who may call which endpoint are spread across
 `permission_classes` on views, `DEFAULT_PERMISSION_CLASSES` in settings, `get_permissions()`
@@ -34,7 +34,8 @@ pip install git+https://github.com/smhasan94/authzlock
 ## Quickstart
 
 Run these from your project root, the directory that holds `manage.py`, inside a git
-repository. Replace `mysite.settings` with your settings module.
+repository. Replace `mysite.settings` with your settings module. For a FastAPI app, set
+`AUTHZLOCK_APP` instead, as shown under [FastAPI](#fastapi).
 
 ```sh quickstart
 export DJANGO_SETTINGS_MODULE=mysite.settings
@@ -91,6 +92,28 @@ the second. [docs/scenario.md](docs/scenario.md) walks through a longer example.
 
 Exit codes for every command: 0 success, 1 the lockfile and the code differ, 2 error (the
 project could not be loaded, the lockfile could not be read, or git failed).
+
+## FastAPI
+
+authzlock reads a FastAPI app the same way, without calling any of its code. Name the app
+as `module:attr` with `--app`, `AUTHZLOCK_APP` or `app` in `[tool.authzlock]`; every command
+and the lockfile format are the same as for Django:
+
+```sh
+export AUTHZLOCK_APP=main:app
+authzlock update
+```
+
+Each HTTP and WebSocket route is recorded with its full router and mount prefix. Its
+dependency tree, including router-level, nested, class and `Security` dependencies, is
+listed by dotted path under `permission_classes`, with `Security` scopes as
+`main.get_current_user[items:write]`, and its security schemes, such as
+`OAuth2PasswordBearer`, under `authentication_classes`. A dependency is only a name to
+authzlock, so a changed dependency list is labelled `changed-unknown`; only removing every
+security scheme from a route is `loosened` (rule R10). `gen-tests` supports Django
+lockfiles only, and the GitHub Action below takes a Django settings module only; in a
+FastAPI workflow, run `authzlock diff --base origin/main` as a plain step. [docs/heuristics-and-limits.md](docs/heuristics-and-limits.md#fastapi)
+covers what this can and cannot see.
 
 ## The lockfile
 
@@ -171,6 +194,7 @@ permission does.
 
 | Rule | Applies when | Label | Example |
 |------|--------------|-------|---------|
+| R10 | Either side's `permission_source` is `dependency` (FastAPI) and `permission_classes` or `authentication_classes` changed | `changed-unknown` when `permission_classes` changed; with only `authentication_classes` changed, `loosened` when every scheme is removed, `tightened` when the first is added, otherwise `changed-unknown` | `[fastapi.security.oauth2.OAuth2PasswordBearer]` to `[]` with the dependencies unchanged is `loosened` |
 | R9 | `permission_classes` changed, either side holds `IsAuthenticatedOrReadOnly` or `DjangoModelPermissionsOrAnonReadOnly`, and `methods` is not `any` | The most severe per-method result of R1 to R8 (`loosened`, then `changed-unknown`, then `tightened`); `equivalent` when no method's effective permissions changed | `[IsAuthenticated]` to `[IsAuthenticatedOrReadOnly]` on a POST-only route is `equivalent` |
 | R1 | Both lists hold only ranked built-ins and the strongest class differs | `loosened` if the strongest class is weaker, `tightened` if stronger | `[IsAuthenticated]` to `[AllowAny]` is `loosened` |
 | R2 | An unranked class is removed, the new list holds no unranked class, and the new strongest built-in is at most `IsAuthenticated` or at most the old strongest built-in | `loosened` | `[shop.permissions.IsOwner]` to `[IsAuthenticated]` is `loosened` |
@@ -181,7 +205,7 @@ permission does.
 | R7 | Only `methods` (and `actions`) changed and `methods` gained entries | `changed-unknown` | `[DELETE, GET]` to `[DELETE, GET, PUT]` is `changed-unknown` |
 | R8 | Anything else | `changed-unknown` | `[(IsAuthenticated \| shop.permissions.IsOwner)]` to `[IsAuthenticated]` is `changed-unknown` |
 
-R9 runs first and judges `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly`
+R10 runs first and covers FastAPI routes. R9 runs next and judges `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly`
 per HTTP method; `equivalent` means the list changed but no method's effective rule did. R1
 to R4 apply only when `permission_classes` is the one access field that changed.
 [docs/classification.md](docs/classification.md) has the full rules, examples and the
@@ -245,7 +269,6 @@ configuration import under `additional_dependencies`, pinned like your project. 
 
 ## What authzlock does not do
 
-- It does not support FastAPI or any framework other than Django and Django REST Framework.
 - It does not prove that custom permission logic is correct. A custom class such as
   `IsOwner` is recorded by name with its docstring; its code is never run or judged.
 - It does not do black-box testing of a running app. It reads code and settings, sends no
@@ -253,7 +276,7 @@ configuration import under `additional_dependencies`, pinned like your project. 
 - It does not generate tests for logged-in users. `authzlock gen-tests` writes pytest
   checks from the lockfile that anonymous requests to protected routes are refused, using
   Django's test client in-process; routes it cannot reason about get a skipped test that
-  says why.
+  says why. It does not generate tests for FastAPI apps.
 
 Some of what it records comes from a heuristic, and the lockfile names it as such.
 `dynamic` means the view overrides `get_permissions()` and the classes are only known at
@@ -279,13 +302,16 @@ Django REST Framework 3.14 and newer. CI runs every cell above with DRF 3.16 or 
 DRF 3.14 on Django 4.2 with Python 3.12. Routers from `drf-nested-routers` are supported.
 Django 4.2 does not support Python 3.13, and Django 6.0 and newer need Python 3.12.
 
+FastAPI 0.100 and newer. CI runs every cell above with the latest FastAPI, and FastAPI 0.100
+on Python 3.12 with Django 5.2. FastAPI is optional and only needed for FastAPI apps.
+
 ## Documentation
 
 [docs/index.md](docs/index.md) lists every page. The main ones:
 
 - [docs/cli.md](docs/cli.md): commands, options, output formats and exit codes.
 - [docs/lockfile.md](docs/lockfile.md): the lockfile format and its stability guarantees.
-- [docs/classification.md](docs/classification.md): the rules R1 to R9.
+- [docs/classification.md](docs/classification.md): the rules R1 to R10.
 - [docs/heuristics-and-limits.md](docs/heuristics-and-limits.md): what the heuristics can
   and cannot tell you, and what a green `check` does not prove.
 - [docs/scenario.md](docs/scenario.md): a pull request that drops `IsOwner`, end to end.

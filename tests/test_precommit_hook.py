@@ -186,7 +186,7 @@ def test_t3_settings_arg_replaces_env_var(
     assert re.search(r"^authzlock check\.+Passed$", result.stdout, re.MULTILINE), result.stdout
     assert control.returncode != 0, control.stdout
     assert f"- exit code: {EXIT_ERROR}" in control.stdout
-    assert "No Django settings module given." in control.stdout
+    assert "No Django settings module or FastAPI app given." in control.stdout
 
 
 @pytest.mark.slow

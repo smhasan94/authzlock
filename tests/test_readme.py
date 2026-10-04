@@ -188,18 +188,17 @@ def test_t3_classification_rules_match_docs() -> None:
 # T4 ---------------------------------------------------------------------------------------
 
 EXCLUSIONS = {
-    "FastAPI": "FastAPI",
     "custom permission logic": "custom permission",
     "black-box testing of a running app": "running app",
     "generated tests": "generate",
 }
 
 
-def test_t4_does_not_do_section_lists_four_exclusions() -> None:
+def test_t4_does_not_do_section_lists_three_exclusions() -> None:
     section = _section(_readme(), "What authzlock does not do")
     items = re.findall(r"^- (.+(?:\n  .+)*)", section, re.MULTILINE)
 
-    assert len(items) == 4, items
+    assert len(items) == 3, items
     for label, phrase in EXCLUSIONS.items():
         matching = [item for item in items if phrase in item]
         assert len(matching) == 1, f"one item must cover {label} ({phrase!r}): {items}"

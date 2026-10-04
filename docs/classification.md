@@ -4,7 +4,7 @@
 the current inventory is `added`, a route only in the base is `removed`, and a route on both
 sides whose fields differ is classified by the rules below as `loosened`, `tightened`,
 `changed-unknown` or `equivalent`. Rules R1 to R8 were agreed on 2026-09-29, R9 was added by
-SHA-239, and they live in `src/authzlock/classify.py`.
+SHA-239, R10 by SHA-243, and they live in `src/authzlock/classify.py`.
 
 A false `loosened` alarm is worse than `changed-unknown`, so the rules are conservative:
 authzlock never guesses what a custom, third-party, composed or `dynamic` permission does.
@@ -54,9 +54,20 @@ The expansion happens only during classification; the lockfile keeps one list pe
 Custom, third-party and composed classes and `dynamic` are copied unchanged, so they stay
 as opaque as under R1 to R8, and `DjangoModelPermissions` stays unranked.
 
+## FastAPI dependencies
+
+A FastAPI route's `permission_classes` lists the dependencies in its dependency tree and its
+`authentication_classes` the security schemes, with `permission_source` set to `dependency`
+(see [heuristics-and-limits.md](heuristics-and-limits.md)). A dependency is only a name:
+removing `get_db` and removing `get_current_user` look the same to authzlock. So rule R10
+never ranks a dependency list. A changed list is `changed-unknown`. When nothing but the
+security schemes changed, losing every scheme is `loosened` and gaining the first one is
+`tightened`; any other scheme change is `changed-unknown`. Any other change to a FastAPI
+route, such as gained methods, falls through to R7 and R8.
+
 ## Rules
 
-The rules run in order and the first one that applies decides; R9 runs first. R1 to R4 apply only when
+The rules run in order and the first one that applies decides; R10 runs first, then R9. R1 to R4 apply only when
 `permission_classes` is the one access field that changed and both sides are plain lists of
 classes (no `dynamic`, no composed expression, not null). The fields `name`,
 `permission_source` and `authentication_source` say where a rule came from, not who may call
@@ -65,6 +76,7 @@ reason starts with that id.
 
 | Rule | Applies when | Label | Example |
 |------|--------------|-------|---------|
+| R10 | Either side's `permission_source` is `dependency` (FastAPI) and `permission_classes` or `authentication_classes` changed | `changed-unknown` when `permission_classes` changed; with only `authentication_classes` changed, `loosened` when every scheme is removed, `tightened` when the first is added, otherwise `changed-unknown` | `[fastapi.security.oauth2.OAuth2PasswordBearer]` to `[]` with the dependencies unchanged is `loosened` |
 | R9 | `permission_classes` changed, either side holds `IsAuthenticatedOrReadOnly` or `DjangoModelPermissionsOrAnonReadOnly`, and `methods` is not `any` | The most severe per-method result of R1 to R8 (`loosened`, then `changed-unknown`, then `tightened`); `equivalent` when no method's effective permissions changed | `[IsAuthenticated]` to `[IsAuthenticatedOrReadOnly]` on a POST-only route is `equivalent` |
 | R1 | Both lists hold only ranked built-ins and the strongest class differs | `loosened` if the strongest class is weaker, `tightened` if stronger | `[IsAuthenticated]` to `[AllowAny]` is `loosened` |
 | R2 | An unranked class is removed, the new list holds no unranked class, and the new strongest built-in is at most `IsAuthenticated` or at most the old strongest built-in | `loosened` | `[shop.permissions.IsOwner]` to `[IsAuthenticated]` is `loosened` |

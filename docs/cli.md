@@ -24,10 +24,10 @@ Every command accepts these options:
 | `--quiet`, `-q` | off | Print nothing on success. Errors are still printed. |
 | `--help` | | Show the command's options and exit. |
 
-The project is loaded in the authzlock process, so its settings module and packages must be
-importable. Run authzlock from the project root, the directory that holds `manage.py`:
-authzlock puts the current directory first on the import path, as `manage.py` does. To run
-it from another directory, put the project root on `PYTHONPATH`.
+The project is loaded in the authzlock process, so its settings module (or FastAPI app
+module) and packages must be importable. Run authzlock from the project root, the directory
+that holds `manage.py`: authzlock puts the current directory first on the import path, as
+`manage.py` does. To run it from another directory, put the project root on `PYTHONPATH`.
 
 Exit codes:
 
@@ -41,9 +41,27 @@ Errors are printed to stderr as one or two plain lines starting with `authzlock:
 second line says what to do, for example:
 
 ```text
-authzlock: No Django settings module given.
-Set DJANGO_SETTINGS_MODULE or pass --settings, for example --settings mysite.settings.
+authzlock: No Django settings module or FastAPI app given.
+Set DJANGO_SETTINGS_MODULE or pass --settings for Django; set AUTHZLOCK_APP or pass --app for FastAPI.
 ```
+
+### Choosing the framework
+
+`update`, `check` and `diff` load a Django project or a FastAPI app. With
+`--framework auto`, the default, authzlock looks at three tiers in order and uses the first
+one that names a project: the command line (`--app`, `--settings`), then the environment
+(`AUTHZLOCK_APP`, `DJANGO_SETTINGS_MODULE`), then [configuration](#configuration) (`app`,
+`settings`). An app means FastAPI, a settings module Django. A tier that names both is an
+error (exit 2) that asks for `--framework`; so is naming neither anywhere. Because the
+command line comes first, `authzlock update --app main:app` works in a shell that also
+exports `DJANGO_SETTINGS_MODULE`.
+
+`--framework django` and `--framework fastapi` skip the guess and read only the settings
+module or only the app, with the same precedence. FastAPI needs the `fastapi` package
+installed in the environment authzlock runs in; Django projects do not need it, and FastAPI
+apps do not need Django to be configured. A FastAPI app is named `module:attr`, such as
+`main:app` or `myservice.api:application`; `--app main` means `main:app`. Importing the module
+runs its top-level code, as Django runs its settings; nothing else is called.
 
 ## Configuration
 
@@ -61,19 +79,21 @@ fail_on = "loosened"
 | Key | Meaning |
 |-----|---------|
 | `settings` | Django settings module, as for `--settings`. |
+| `app` | FastAPI application as `module:attr`, as for `--app`. |
 | `lockfile` | Lockfile path, relative to the directory that holds `pyproject.toml`, so every command finds the same file from any directory. |
 | `fail_on` | `any` or `loosened`, as for `diff --fail-on`. |
 
 Precedence, highest first:
 
 - settings module: `--settings`, then `DJANGO_SETTINGS_MODULE`, then `settings`;
+- FastAPI app: `--app`, then `AUTHZLOCK_APP`, then `app`;
 - lockfile: `--lockfile`, then `lockfile`, then `authz.lock`;
 - fail-on: `--fail-on`, then `fail_on`, then `any`.
 
 Every key must be a non-empty string. An unknown key, a value of the wrong type, a `fail_on`
 other than `any` or `loosened`, or a file that is not valid TOML is an error (exit 2) that
-names the file and the key or line. When the settings module from `pyproject.toml` fails to
-import, the error says so. The settings module must still be importable from where authzlock
+names the file and the key or line. When the settings module or app from `pyproject.toml`
+fails to import, the error says so. The settings module must still be importable from where authzlock
 runs; see [Shared conventions](#shared-conventions).
 
 ## authzlock update
@@ -101,6 +121,8 @@ updated `authz.lock` with the change.
 | Option | Default | Meaning |
 |--------|---------|---------|
 | `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
+| `--app MODULE:ATTR` | `AUTHZLOCK_APP` | FastAPI application to load; `ATTR` defaults to `app`. Overrides the environment variable and [configuration](#configuration). |
+| `--framework auto\|django\|fastapi` | `auto` | Which kind of project to load; see [Choosing the framework](#choosing-the-framework). |
 | `--ignore-path PREFIX` | | Leave out routes whose URL pattern starts with `PREFIX`. Repeatable. |
 | `--ignore-view PREFIX` | | Leave out routes whose view is in module `PREFIX`. Repeatable. |
 | `--no-ignore` | off | Clear the recorded ignore list. Cannot be combined with the two options above. |
@@ -143,6 +165,8 @@ authz.lock: up to date
 | Option | Default | Meaning |
 |--------|---------|---------|
 | `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
+| `--app MODULE:ATTR` | `AUTHZLOCK_APP` | FastAPI application to load; `ATTR` defaults to `app`. Overrides the environment variable and [configuration](#configuration). |
+| `--framework auto\|django\|fastapi` | `auto` | Which kind of project to load; see [Choosing the framework](#choosing-the-framework). |
 
 The comparison is between the parsed lockfile and the fresh extraction, not between file
 bytes, so a lockfile that differs only in YAML formatting (blank lines, quoting, key
@@ -196,6 +220,8 @@ $ authzlock diff --base origin/main --settings mysite.settings
 | Option | Default | Meaning |
 |--------|---------|---------|
 | `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
+| `--app MODULE:ATTR` | `AUTHZLOCK_APP` | FastAPI application to load; `ATTR` defaults to `app`. Overrides the environment variable and [configuration](#configuration). |
+| `--framework auto\|django\|fastapi` | `auto` | Which kind of project to load; see [Choosing the framework](#choosing-the-framework). |
 | `--base REF` | required | Git ref (branch, tag or commit) whose committed lockfile is the old side. |
 | `--format text\|markdown\|json\|sarif` | `text` | Output format. `json` and `sarif` are described below. |
 | `--fail-on any\|loosened` | `any` | `any`: exit 1 on any change. `loosened`: exit 1 only when a route is loosened. Overrides [configuration](#configuration). |
@@ -356,7 +382,8 @@ $ pytest tests/test_authz_lock.py
 |--------|---------|---------|
 | `--output PATH` | `tests/test_authz_lock.py` | Where to write the module, relative to the current directory. Parent directories are created. |
 
-`--lockfile` and `--quiet` work as for the other commands. What each route gets:
+`--lockfile` and `--quiet` work as for the other commands. A lockfile written from a FastAPI
+app is refused (exit 2): the generated tests use Django's test client. What each route gets:
 
 | Lockfile says | Generated test |
 |---------------|----------------|

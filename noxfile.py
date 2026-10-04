@@ -27,7 +27,12 @@ MIN_DRF_DJANGO = "4.2"
 # drf-nested-routers 0.95 needs DRF 3.15; 0.94 is the last release that supports DRF 3.14.
 NESTED_ROUTERS_MIN = "drf-nested-routers==0.94.*"
 
-nox.options.sessions = ["lint", "typecheck", "tests", "tests_min_drf"]
+# The oldest supported FastAPI, from before included routers were resolved lazily, so the
+# extractor's fallback for a flat `app.routes` stays tested.
+FASTAPI_MIN = "fastapi==0.100.*"
+FASTAPI_MIN_DJANGO = "5.2"
+
+nox.options.sessions = ["lint", "typecheck", "tests", "tests_min_drf", "tests_min_fastapi"]
 nox.options.default_venv_backend = "uv|virtualenv"
 
 
@@ -63,4 +68,13 @@ def tests_min_drf(session: nox.Session) -> None:
     session.install(f"django~={MIN_DRF_DJANGO}.0", DRF_MIN, NESTED_ROUTERS_MIN)
     session.env["AUTHZLOCK_DJANGO"] = MIN_DRF_DJANGO
     session.env["AUTHZLOCK_DRF"] = "3.14"
+    session.run("pytest", *session.posargs)
+
+
+@nox.session(python="3.12")
+def tests_min_fastapi(session: nox.Session) -> None:
+    """Run the test suite against the oldest supported FastAPI."""
+    session.install("-e", ".[dev]")
+    session.install(f"django~={FASTAPI_MIN_DJANGO}.0", DRF, FASTAPI_MIN)
+    session.env["AUTHZLOCK_DJANGO"] = FASTAPI_MIN_DJANGO
     session.run("pytest", *session.posargs)

@@ -1,7 +1,8 @@
 """Custom permission classes: a stable string form, and a registry of where each is used.
 
 A class is custom when its module is not `rest_framework.permissions`; third-party classes
-count as custom. Classes are only inspected, never instantiated or called.
+count as custom. Classes are only inspected, never instantiated or called. The FastAPI
+extractor records dependency callables in the same registry with `Registry.record`.
 """
 
 from __future__ import annotations
@@ -45,9 +46,15 @@ def is_custom(klass: type) -> bool:
     return klass.__module__ != BUILTIN_MODULE
 
 
-def docstring(klass: type) -> str | None:
-    """First paragraph of the class's own docstring; inherited docstrings do not count."""
-    raw = klass.__dict__.get("__doc__")
+def docstring(obj: Any) -> str | None:
+    """First paragraph of the docstring of a class, function or method. A class's
+    inherited docstring does not count; a callable instance uses its class's."""
+    if isinstance(obj, type):
+        raw = obj.__dict__.get("__doc__")
+    elif inspect.isfunction(obj) or inspect.ismethod(obj):
+        raw = obj.__doc__
+    else:
+        return docstring(type(obj))
     if not isinstance(raw, str) or not raw.strip():
         return None
     first = inspect.cleandoc(raw).split("\n\n", 1)[0]
@@ -55,26 +62,35 @@ def docstring(klass: type) -> str | None:
 
 
 class Registry:
-    """Collects the custom classes used by each route."""
+    """Collects the custom classes, or FastAPI dependency callables, used by each route."""
 
     def __init__(self) -> None:
-        self._classes: dict[str, type] = {}
+        self._objects: dict[str, Any] = {}
         self._used_by: dict[str, set[str]] = {}
 
     def add(self, route_key: str, items: Iterable[Any]) -> None:
         for item in items:
             for klass in operand_classes(item):
                 if is_custom(klass):
-                    path = render_permission(klass)
-                    self._classes[path] = klass
-                    self._used_by.setdefault(path, set()).add(route_key)
+                    self.record(route_key, render_permission(klass), klass)
+
+    def record(self, route_key: str, path: str, obj: Any) -> None:
+        """Record that `route_key` uses `obj`, a class or callable known by `path`."""
+        self._objects[path] = obj
+        self._used_by.setdefault(path, set()).add(route_key)
 
     def collect(self) -> dict[str, dict[str, Any]]:
         return {
             path: {
-                "name": self._classes[path].__name__,
-                "docstring": docstring(self._classes[path]),
+                "name": _name(self._objects[path]),
+                "docstring": docstring(self._objects[path]),
                 "used_by": sorted(self._used_by[path]),
             }
-            for path in sorted(self._classes)
+            for path in sorted(self._objects)
         }
+
+
+def _name(obj: Any) -> str:
+    """`__name__` of a class or function; the class name for a callable instance."""
+    name = getattr(obj, "__name__", None)
+    return name if isinstance(name, str) else type(obj).__name__

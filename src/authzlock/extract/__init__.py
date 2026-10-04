@@ -1,16 +1,27 @@
-"""Build the inventory for the Django project loaded in this process."""
+"""Build the inventory for the Django project loaded in this process.
+
+Django is imported only when `extract()` runs, so the FastAPI extractor in
+`authzlock.extract.fastapi` and the shared helpers here work without Django installed.
+"""
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from authzlock.extract import decorators, drf, scoping
 from authzlock.extract.custom import Registry
+from authzlock.extract.identity import view_class_of, view_identity
 from authzlock.extract.methods import methods_for
-from authzlock.extract.urls import RawRoute, view_class_of, view_identity, walk_urlconf
 from authzlock.model import Inventory, Route
+
+if TYPE_CHECKING:
+    from authzlock.extract.urls import RawRoute
 
 
 def extract() -> Inventory:
     """Return the project's inventory: one route per URL pattern, sorted by path and view."""
+    from authzlock.extract.urls import walk_urlconf
+
     registry = Registry()
     routes = []
     for raw in walk_urlconf():

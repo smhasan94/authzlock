@@ -133,6 +133,39 @@ Rules R2 to R4 can still label some changes, because they reason only about a cu
 being added to or removed from a list; replacing one custom class with another is
 `changed-unknown` (rule R3).
 
+## FastAPI
+
+For a FastAPI app, authzlock walks `app.routes`, including included routers and mounted
+sub-applications, and reads each route's dependency tree without calling anything. Every
+dependency is recorded by dotted path in `permission_classes` and every security scheme
+(`OAuth2PasswordBearer`, `HTTPBearer`, `APIKeyHeader` and their subclasses) by class path in
+`authentication_classes`; both sources are `dependency`. What that does and does not tell
+you:
+
+- A dependency is a name. `get_current_user` suggests authentication and `get_db` does not,
+  but authzlock does not read either one's code, so it never ranks a dependency list:
+  a changed list is `changed-unknown` (rule R10). Dependencies outside `fastapi` and
+  `starlette` are listed under `custom_permissions` with their docstring, like custom DRF
+  classes.
+- A security scheme only shows that the route reads a credential. Whether the dependency
+  that receives it rejects a bad one is up to that dependency. Losing every scheme while the
+  dependency list stays the same is `loosened`; anything else involving schemes is
+  `changed-unknown`.
+- A callable object is recorded by its class, so `Depends(RoleChecker(["admin"]))` and
+  `Depends(RoleChecker(["user"]))` look the same. A lambda is `module.<lambda>`. A
+  `functools.partial` is recorded by the function it wraps.
+- `Security` scopes are recorded as `path[scope_a,scope_b]`, sorted. FastAPI releases
+  before the one that added `own_oauth_scopes` only expose the scopes merged with those of
+  enclosing dependencies, so a lockfile written with such a release can list inherited
+  scopes too.
+- A mounted application that has no routes of its own, such as `StaticFiles` or another
+  ASGI app, is one route with `methods: [any]` and `dynamic` rules: authzlock cannot see
+  inside it.
+- `app.dependency_overrides` is ignored, because it is a test-time setting, and so is
+  middleware, including Starlette's `AuthenticationMiddleware`.
+- FastAPI's own docs routes (`/docs`, `/redoc`, `/openapi.json`) are recorded like any other
+  route when they are enabled. They have no dependencies, so they appear as open.
+
 ## Lockfiles across Django and DRF versions
 
 The lockfile records the URL patterns Django builds, and different Django or DRF versions

@@ -1,8 +1,10 @@
 """Read the `[tool.authzlock]` table from the nearest `pyproject.toml`.
 
-The table is optional. Keys: `settings` (Django settings module), `lockfile` (path relative
-to the directory holding `pyproject.toml`) and `fail_on` (`any` or `loosened`). Command-line
-flags and `DJANGO_SETTINGS_MODULE` take precedence; the CLI applies that rule.
+The table is optional. Keys: `settings` (Django settings module), `app` (FastAPI
+application as `module:attr`), `lockfile` (path relative to the directory holding
+`pyproject.toml`) and `fail_on` (`any` or `loosened`). Command-line flags and the
+`DJANGO_SETTINGS_MODULE` and `AUTHZLOCK_APP` variables take precedence; the CLI applies
+that rule.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ else:
     import tomli as tomllib
 
 PYPROJECT = "pyproject.toml"
-KEYS = ("fail_on", "lockfile", "settings")
+KEYS = ("app", "fail_on", "lockfile", "settings")
 FAIL_ON_VALUES = ("any", "loosened")
 
 
@@ -28,6 +30,7 @@ class Config:
     """Values from `[tool.authzlock]`; None for every key that is absent."""
 
     settings: str | None = None
+    app: str | None = None
     lockfile: Path | None = None
     fail_on: str | None = None
     path: Path | None = None
@@ -88,6 +91,7 @@ def load_config(start: Path | None = None) -> Config:
     lockfile = values.get("lockfile")
     return Config(
         settings=values.get("settings"),
+        app=values.get("app"),
         lockfile=path.parent / lockfile if lockfile is not None else None,
         fail_on=fail_on,
         path=path,
