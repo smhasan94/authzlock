@@ -5,7 +5,7 @@
   "description": "The document printed by `authzlock diff --format json`. See docs/diff-json.md.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "tool", "base", "summary", "changes", "custom_permissions"],
+  "required": ["schema_version", "tool", "base", "ignore", "summary", "changes", "custom_permissions"],
   "properties": {
     "schema_version": {"const": 1},
     "tool": {
@@ -25,6 +25,16 @@
         "ref": {"type": "string"},
         "lockfile": {"type": "string"},
         "lockfile_found": {"type": "boolean"}
+      }
+    },
+    "ignore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "current", "changed"],
+      "properties": {
+        "base": {"$ref": "#/$defs/ignore_list"},
+        "current": {"$ref": "#/$defs/ignore_list"},
+        "changed": {"type": "boolean"}
       }
     },
     "summary": {
@@ -102,6 +112,15 @@
   },
   "$defs": {
     "count": {"type": "integer", "minimum": 0},
+    "ignore_list": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paths", "views"],
+      "properties": {
+        "paths": {"type": "array", "items": {"type": "string"}},
+        "views": {"type": "array", "items": {"type": "string"}}
+      }
+    },
     "fieldChange": {
       "type": "object",
       "additionalProperties": false,

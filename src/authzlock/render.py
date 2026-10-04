@@ -115,8 +115,13 @@ class DiffReport:
     base_found: bool
     diff: Diff
     entries: tuple[ClassifiedRoute, ...]
-    # (base list, list applied to the current project) when they differ.
-    ignore_changed: tuple[IgnoreList, IgnoreList] | None = None
+    # (base lockfile's list, list applied to the current project).
+    ignore: tuple[IgnoreList, IgnoreList] = (IgnoreList(), IgnoreList())
+
+    @property
+    def ignore_changed(self) -> tuple[IgnoreList, IgnoreList] | None:
+        """Both ignore lists when they differ, None when they are the same."""
+        return self.ignore if self.ignore[0] != self.ignore[1] else None
 
     def count(self, label: Label) -> int:
         return sum(1 for entry in self.entries if entry.classification.label == label)
@@ -141,13 +146,17 @@ class DiffReport:
         """Every note to print above the changes, one line each."""
         notes = [self.note] if self.note else []
         if self.ignore_changed is not None:
-            old, new = self.ignore_changed
-            notes.append(
-                f"ignore list changed from {_describe_ignore(old)} at {self.ref} to "
-                f"{_describe_ignore(new)}; routes it drops or restores are reported as "
-                "removed or added"
-            )
+            notes.append(ignore_note(self.ref, *self.ignore_changed))
         return notes
+
+
+def ignore_note(ref: str, old: IgnoreList, new: IgnoreList) -> str:
+    """The note shown when the base lockfile's ignore list differs from the current one."""
+    return (
+        f"ignore list changed from {_describe_ignore(old)} at {ref} to "
+        f"{_describe_ignore(new)}; routes it drops or restores are reported as "
+        "removed or added"
+    )
 
 
 def _describe_ignore(ignore: IgnoreList) -> str:
@@ -166,7 +175,7 @@ def build_report(
     ref: str,
     lockfile: str,
     base_found: bool,
-    ignore_changed: tuple[IgnoreList, IgnoreList] | None = None,
+    ignore: tuple[IgnoreList, IgnoreList] = (IgnoreList(), IgnoreList()),
 ) -> DiffReport:
     """Classify `diff` and bundle it with where the base lockfile came from."""
     return DiffReport(
@@ -175,7 +184,7 @@ def build_report(
         base_found=base_found,
         diff=diff,
         entries=classify_diff(diff),
-        ignore_changed=ignore_changed,
+        ignore=ignore,
     )
 
 
@@ -407,6 +416,11 @@ def to_document(report: DiffReport, locations: Mapping[str, Location]) -> dict[s
             "lockfile": report.lockfile,
             "lockfile_found": report.base_found,
         },
+        "ignore": {
+            "base": _ignore_lists(report.ignore[0]),
+            "current": _ignore_lists(report.ignore[1]),
+            "changed": report.ignore_changed is not None,
+        },
         "summary": {label.replace("-", "_"): report.count(label) for label in SUMMARY_LABELS},
         "changes": [_change(entry, locations.get(entry.key, fallback)) for entry in report.entries],
         "custom_permissions": {
@@ -421,6 +435,10 @@ def to_document(report: DiffReport, locations: Mapping[str, Location]) -> dict[s
             ],
         },
     }
+
+
+def _ignore_lists(ignore: IgnoreList) -> dict[str, list[str]]:
+    return {"paths": list(ignore.paths), "views": list(ignore.views)}
 
 
 def render_json(document: Mapping[str, Any]) -> str:

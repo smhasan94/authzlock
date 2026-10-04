@@ -11,7 +11,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from authzlock.render import SUMMARY_LABELS, format_value, render_json
+from authzlock.model import IgnoreList
+from authzlock.render import SUMMARY_LABELS, format_value, ignore_note, render_json
 
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -78,16 +79,20 @@ def _result(change: Mapping[str, Any]) -> dict[str, Any]:
 def to_sarif(document: Mapping[str, Any]) -> dict[str, Any]:
     """The SARIF log for a `render.to_document` document."""
     base = document["base"]
-    invocation: dict[str, Any] = {"executionSuccessful": True}
+    notes = []
     if not base["lockfile_found"]:
+        notes.append(
+            f"base ref has no authz.lock ({base['ref']}:{base['lockfile']}); "
+            "every route is reported as added"
+        )
+    ignore = document["ignore"]
+    if ignore["changed"]:
+        old, new = (IgnoreList.of(**ignore[side]) for side in ("base", "current"))
+        notes.append(ignore_note(base["ref"], old, new))
+    invocation: dict[str, Any] = {"executionSuccessful": True}
+    if notes:
         invocation["toolExecutionNotifications"] = [
-            {
-                "level": "note",
-                "message": {
-                    "text": f"base ref has no authz.lock ({base['ref']}:{base['lockfile']}); "
-                    "every route is reported as added"
-                },
-            }
+            {"level": "note", "message": {"text": text}} for text in notes
         ]
     return {
         "$schema": SARIF_SCHEMA,
