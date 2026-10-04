@@ -14,6 +14,9 @@ All notable changes to authzlock are recorded here. The format follows
 - `authzlock diff --format json` prints a machine-readable document (see
   `docs/diff-json.md` and `docs/diff.schema.json`), and `--format sarif` a SARIF 2.1.0 log
   for GitHub code scanning. Each change points at the file and line of its view.
+- `authzlock update --ignore-path PREFIX --ignore-view PREFIX` leaves routes out of the
+  lockfile, for example the Django admin; the list is recorded under `ignore` and applied
+  by `check` and `diff`. `--no-ignore` clears it. Lockfiles without a list are unchanged.
 
 ## [0.1.0] - 2026-10-02
 

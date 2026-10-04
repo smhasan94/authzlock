@@ -85,6 +85,20 @@ custom_permissions:
 
 - `schema_version`: the lockfile format version, currently `1`. authzlock refuses to read
   a lockfile with a newer version and asks you to upgrade.
+- `ignore` (optional): the routes `authzlock update` leaves out, as `paths` (URL pattern
+  prefixes) and `views` (view module prefixes), each sorted and deduplicated. Only non-empty
+  lists are written, and the key is absent when nothing is ignored, so a lockfile without
+  an ignore list is byte-identical to one written before the key existed. `check` and
+  `diff` apply the recorded list; see [cli.md](cli.md#ignoring-routes).
+
+  ```yaml
+  ignore:
+    paths:
+    - admin/
+    views:
+    - debug_toolbar
+  ```
+
 - `routes`: one entry per URL pattern, sorted by `path`, then `view`.
 - `custom_permissions`: permission classes whose module is not `rest_framework.permissions`
   (third-party classes included), keyed by dotted path and sorted by it. authzlock only

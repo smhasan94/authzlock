@@ -26,7 +26,7 @@ from typing import Any
 from authzlock import __version__
 from authzlock.classify import ClassifiedRoute, Label, classify_diff
 from authzlock.diff import Diff, FieldChange
-from authzlock.model import Route
+from authzlock.model import IgnoreList, Route
 
 _INDENT = "  "
 
@@ -113,6 +113,8 @@ class DiffReport:
     base_found: bool
     diff: Diff
     entries: tuple[ClassifiedRoute, ...]
+    # (base list, list applied to the current project) when they differ.
+    ignore_changed: tuple[IgnoreList, IgnoreList] | None = None
 
     def count(self, label: Label) -> int:
         return sum(1 for entry in self.entries if entry.classification.label == label)
@@ -132,8 +134,38 @@ class DiffReport:
             "every route is reported as added"
         )
 
+    @property
+    def notes(self) -> list[str]:
+        """Every note to print above the changes, one line each."""
+        notes = [self.note] if self.note else []
+        if self.ignore_changed is not None:
+            old, new = self.ignore_changed
+            notes.append(
+                f"ignore list changed from {_describe_ignore(old)} at {self.ref} to "
+                f"{_describe_ignore(new)}; routes it drops or restores are reported as "
+                "removed or added"
+            )
+        return notes
 
-def build_report(diff: Diff, *, ref: str, lockfile: str, base_found: bool) -> DiffReport:
+
+def _describe_ignore(ignore: IgnoreList) -> str:
+    """`paths [a/, b/], views [x]`, leaving out an empty list, or `nothing`."""
+    parts = [
+        f"{name} [{', '.join(values)}]"
+        for name, values in (("paths", ignore.paths), ("views", ignore.views))
+        if values
+    ]
+    return ", ".join(parts) or "nothing"
+
+
+def build_report(
+    diff: Diff,
+    *,
+    ref: str,
+    lockfile: str,
+    base_found: bool,
+    ignore_changed: tuple[IgnoreList, IgnoreList] | None = None,
+) -> DiffReport:
     """Classify `diff` and bundle it with where the base lockfile came from."""
     return DiffReport(
         ref=ref,
@@ -141,6 +173,7 @@ def build_report(diff: Diff, *, ref: str, lockfile: str, base_found: bool) -> Di
         base_found=base_found,
         diff=diff,
         entries=classify_diff(diff),
+        ignore_changed=ignore_changed,
     )
 
 
@@ -188,8 +221,10 @@ def render_text(report: DiffReport) -> str:
     reason in parentheses for changed routes. An empty diff prints `no changes`.
     """
     lines: list[str] = []
-    if report.note:
-        lines.extend([f"note: {report.note}", ""])
+    for note in report.notes:
+        lines.append(f"note: {note}")
+    if report.notes:
+        lines.append("")
     if report.diff.is_empty:
         return "\n".join([*lines, NO_CHANGES]) + "\n"
     for label in SUMMARY_LABELS:
@@ -254,8 +289,8 @@ def render_markdown(report: DiffReport) -> str:
     removed and changed-unknown routes and for custom permission registry changes.
     """
     lines = [MARKDOWN_MARKER, "### authzlock: access-control changes", ""]
-    if report.note:
-        lines.extend([f"> **Note:** {report.note}.", ""])
+    for note in report.notes:
+        lines.extend([f"> **Note:** {note}.", ""])
     lines.extend([report.summary(), ""])
     if report.diff.is_empty:
         lines.append(f"No access-control changes against {_code(report.ref)}.")
