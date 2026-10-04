@@ -20,8 +20,8 @@ Every command that reads a project or a lockfile accepts these options:
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable. |
-| `--lockfile PATH` | `authz.lock` | Lockfile path, relative to the current directory. |
+| `--settings MODULE` | `DJANGO_SETTINGS_MODULE` | Django settings module to load. Overrides the environment variable and [configuration](#configuration). |
+| `--lockfile PATH` | `authz.lock` | Lockfile path, relative to the current directory. Overrides [configuration](#configuration). |
 | `--quiet`, `-q` | off | Print nothing on success. Errors are still printed. |
 | `--help` | | Show the command's options and exit. |
 
@@ -45,6 +45,37 @@ second line says what to do, for example:
 authzlock: No Django settings module given.
 Set DJANGO_SETTINGS_MODULE or pass --settings, for example --settings mysite.settings.
 ```
+
+## Configuration
+
+Instead of passing the same options every time, set them once in a `[tool.authzlock]` table
+in `pyproject.toml`. authzlock reads the nearest `pyproject.toml` in the current directory or
+one of its parents; the table is optional.
+
+```toml
+[tool.authzlock]
+settings = "mysite.settings"
+lockfile = "config/authz.lock"
+fail_on = "loosened"
+```
+
+| Key | Meaning |
+|-----|---------|
+| `settings` | Django settings module, as for `--settings`. |
+| `lockfile` | Lockfile path, relative to the directory that holds `pyproject.toml`, so every command finds the same file from any directory. |
+| `fail_on` | `any` or `loosened`, as for `diff --fail-on`. |
+
+Precedence, highest first:
+
+- settings module: `--settings`, then `DJANGO_SETTINGS_MODULE`, then `settings`;
+- lockfile: `--lockfile`, then `lockfile`, then `authz.lock`;
+- fail-on: `--fail-on`, then `fail_on`, then `any`.
+
+Every key must be a non-empty string. An unknown key, a value of the wrong type, a `fail_on`
+other than `any` or `loosened`, or a file that is not valid TOML is an error (exit 2) that
+names the file and the key or line. When the settings module from `pyproject.toml` fails to
+import, the error says so. The settings module must still be importable from where authzlock
+runs; see [Shared conventions](#shared-conventions).
 
 ## authzlock update
 
@@ -131,7 +162,7 @@ $ authzlock diff --base origin/main --settings mysite.settings
 |--------|---------|---------|
 | `--base REF` | required | Git ref (branch, tag or commit) whose committed lockfile is the old side. |
 | `--format text\|markdown` | `text` | Output format. |
-| `--fail-on any\|loosened` | `any` | `any`: exit 1 on any change. `loosened`: exit 1 only when a route is loosened. |
+| `--fail-on any\|loosened` | `any` | `any`: exit 1 on any change. `loosened`: exit 1 only when a route is loosened. Overrides [configuration](#configuration). |
 
 `--settings`, `--lockfile` and `--quiet` work as for the other commands.
 

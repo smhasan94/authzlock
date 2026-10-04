@@ -19,5 +19,9 @@ class LockfileError(AuthzlockError):
     """The lockfile could not be read or written."""
 
 
+class ConfigError(AuthzlockError):
+    """The `[tool.authzlock]` table in `pyproject.toml` could not be read or is invalid."""
+
+
 class GitError(AuthzlockError):
     """A git command needed to read the base lockfile failed."""

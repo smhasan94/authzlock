@@ -102,7 +102,7 @@ Not scheduled. Placeholders only; they get the full template when pulled into an
 
 | Ticket | Title | Estimate | Blocked by |
 |--------|-------|----------|------------|
-| SHA-238 | Later: [tool.authzlock] config in pyproject.toml | - | none |
+| SHA-238 | Later: [tool.authzlock] config in pyproject.toml | 1 | SHA-225, SHA-230 |
 | SHA-239 | Later: per-method effective permissions | - | none |
 | SHA-241 | Later: JSON and SARIF output for diff | - | none |
 | SHA-243 | Later: FastAPI extraction | - | none |

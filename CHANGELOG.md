@@ -6,6 +6,12 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `[tool.authzlock]` in `pyproject.toml` sets `settings`, `lockfile` and `fail_on` for
+  `update`, `check` and `diff`. Flags and `DJANGO_SETTINGS_MODULE` still take precedence. See
+  `docs/cli.md`.
+
 ## [0.1.0] - 2026-10-02
 
 First release.

@@ -36,6 +36,7 @@ dependencies = [
   "django>=4.2",
   "typer>=0.12",
   "pyyaml>=6",
+  "tomli>=2; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +49,7 @@ dev = [
   "hatchling>=1.25",
   "pre-commit>=3.8",
   "types-PyYAML",
+  "tomli>=2",
   "django>=4.2",
   "djangorestframework>=3.14",
   "drf-nested-routers>=0.93",
