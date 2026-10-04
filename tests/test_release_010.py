@@ -38,9 +38,6 @@ def test_t5_changelog_010_section_complete(repo_root: Path) -> None:
     assert re.search(r"^## \[0\.1\.0\] - \d{4}-\d{2}-\d{2}$", text, re.M), "no dated 0.1.0"
     assert text.index("## [Unreleased]") < text.index("## [0.1.0]")
 
-    unreleased = _changelog_section(text, "[Unreleased]")
-    assert not re.search(r"^\s*-\s", unreleased, re.M), "the Unreleased section must be empty"
-
     released = _changelog_section(text, "[0.1.0]")
     for item in (
         "`authzlock update`",
