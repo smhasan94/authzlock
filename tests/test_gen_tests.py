@@ -265,8 +265,8 @@ def test_extra_generated_module_passes_ruff_check_and_format(lockfile_dir: Path)
 def test_t10_missing_lockfile_exits_2_and_output_parent_is_created(lockfile_dir: Path) -> None:
     missing = _invoke("--lockfile", "nope.lock")
     nested = _invoke("--output", "a/b/c/test_generated.py")
-    (lockfile_dir / "taken").mkdir()
-    unwritable = _invoke("--output", "taken")
+    (lockfile_dir / "taken").write_text("a file, not a directory\n", encoding="utf-8")
+    unwritable = _invoke("--output", "taken/test_generated.py")
 
     assert missing.exit_code == EXIT_ERROR
     assert "nope.lock not found" in missing.stderr
@@ -274,7 +274,8 @@ def test_t10_missing_lockfile_exits_2_and_output_parent_is_created(lockfile_dir:
     assert nested.exit_code == EXIT_OK, nested.output
     assert (lockfile_dir / "a" / "b" / "c" / "test_generated.py").is_file()
     assert unwritable.exit_code == EXIT_ERROR
-    assert "--output" in unwritable.output
+    assert unwritable.stderr.startswith("authzlock: cannot write taken/test_generated.py")
+    assert "pass --output with another path" in unwritable.stderr
 
 
 def test_extra_invalid_lockfile_exits_2(lockfile_dir: Path) -> None:
