@@ -13,10 +13,6 @@ line, not the effect. authzlock reads those rules from the code, writes them for
 to a committed file, `authz.lock`, and on each pull request reports which routes changed and
 whether a change made access looser.
 
-**Status: pre-release.** The first release, 0.1.0, is not published yet. Until it is,
-`pip install authzlock`, the `smhasan94/authzlock@v1` action tag and the `v0.1.0` pre-commit
-rev below do not resolve; install from GitHub instead, as shown under Install.
-
 ## Install
 
 ```sh
@@ -25,7 +21,8 @@ pip install authzlock
 
 Install it into the same environment as your project, because authzlock imports your
 settings and URL configuration. Django 4.2 or newer is installed with it if missing; Django REST
-Framework is optional and only needed if your project uses it. Before the first release, install from the repository:
+Framework is optional and only needed if your project uses it; so is FastAPI. To try
+unreleased changes, install from the repository:
 
 ```sh
 pip install git+https://github.com/smhasan94/authzlock
@@ -254,7 +251,7 @@ to `.pre-commit-config.yaml` and run `pre-commit install`:
 ```yaml
 repos:
   - repo: https://github.com/smhasan94/authzlock
-    rev: v0.1.0
+    rev: v0.2.0
     hooks:
       - id: authzlock-check
         args: ["--settings", "mysite.settings"]
