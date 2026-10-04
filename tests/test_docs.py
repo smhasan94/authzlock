@@ -76,7 +76,7 @@ def documented_options(text: str) -> dict[str, set[str]]:
         heading = re.match(r"^## (.+)$", line)
         if heading:
             title = heading.group(1).strip()
-            command = re.fullmatch(r"authzlock (\w+)", title)
+            command = re.fullmatch(r"authzlock ([\w-]+)", title)
             if title == "Global options":
                 section = ROOT
             elif title == "Shared conventions":
@@ -128,7 +128,9 @@ def cli_doc_drift(text: str) -> list[str]:
 
 def test_t1_cli_docs_match_help_output() -> None:
     actual = help_options()
-    assert set(actual) == {ROOT, "update", "check", "diff"}, sorted(actual)
+    assert set(actual) == {ROOT, "update", "check", "diff", "gen-tests"}, sorted(actual)
+    assert {"--lockfile", "--output"} <= actual["gen-tests"]
+    assert "--settings" not in actual["gen-tests"]
     assert {"--settings", "--lockfile", "--quiet", "-q", "--help"} <= actual["check"]
     assert {"--base", "--format", "--fail-on"} <= actual["diff"]
     assert actual[ROOT] == {"--version", "--help"}
@@ -152,7 +154,7 @@ def test_t6_checker_detects_a_fake_flag(tmp_path: Path) -> None:
     without = _read(copy).replace(fake, "").replace("| `--quiet`, `-q` |", "| |")
     assert cli_doc_drift(without) == [
         f"authzlock {command}: {option} is in --help but not documented"
-        for command in ("check", "diff", "update")
+        for command in ("check", "diff", "gen-tests", "update")
         for option in ("--quiet", "-q")
     ]
 

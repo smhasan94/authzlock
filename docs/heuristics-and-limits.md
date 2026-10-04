@@ -149,3 +149,13 @@ from the code with the installed Django and DRF. It does not mean:
 Likewise, `authzlock diff` labelling nothing as `loosened` does not prove nothing was
 loosened: `changed-unknown` routes need a human, and changes inside a custom class, a
 `get_permissions` override or a helper function do not change the lockfile at all.
+
+### What generated tests do not prove
+
+`authzlock gen-tests` turns the lockfile into anonymous-request tests. A green run shows
+that each tested route refuses an anonymous request at one sample URL. It does not show
+that an authenticated user without the right role is refused, that object-level checks
+work, or anything about the routes it skips or leaves without assertions; the summary
+line says how many those are. The tests check the lockfile against the running project, so
+a lockfile that already records a wrong rule produces tests that confirm the wrong rule.
+

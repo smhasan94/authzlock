@@ -152,3 +152,25 @@ def make_repo(fixture: str, tmp_path: Path, *, lockfile: str | None = "authz.loc
     git(repo, "add", "--all")
     git(repo, "commit", "--quiet", "--message", f"{fixture} fixture")
     return repo
+
+
+def run_generated_tests(
+    project: Path, module: Path, *, select: str | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run pytest on the generated `module` against the Django project in `project`.
+
+    The project directory is the rootdir and no ini file is read, so this repository's own
+    `conftest.py` and pytest settings are not used; the project is on `PYTHONPATH` with
+    `DJANGO_SETTINGS_MODULE=settings`, as for `make_repo` projects.
+    """
+    env = dict(os.environ)
+    for key, value in project_env(project).items():
+        if value is None:
+            env.pop(key, None)
+        else:
+            env[key] = value
+    args = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-c", os.devnull]
+    args += ["--rootdir", str(project), str(module)]
+    if select is not None:
+        args += ["-k", select]
+    return subprocess.run(args, cwd=project, env=env, capture_output=True, text=True, check=False)

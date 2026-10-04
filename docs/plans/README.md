@@ -27,6 +27,7 @@ MVP tickets share the design decisions below so that tickets built in parallel f
 | `gitutil.py` | SHA-230 | read a file at a git ref |
 | `locate.py` | SHA-241 | source file and line of a view, for JSON and SARIF output |
 | `sarif.py` | SHA-241 | SARIF 2.1.0 output built from the JSON document |
+| `gen_tests.py` | SHA-244 | `gen-tests`: pytest module of anonymous-access checks from the lockfile |
 | `cli.py` | SHA-225, SHA-226, SHA-230 | Typer commands `update`, `check`, `diff` |
 
 ## Data model

@@ -29,6 +29,8 @@ from authzlock.errors import (
     LockfileError,
     ProjectLoadError,
 )
+from authzlock.gen_tests import DEFAULT_OUTPUT as DEFAULT_TESTS_OUTPUT
+from authzlock.gen_tests import generate as generate_tests
 from authzlock.ignore import apply as apply_ignore
 from authzlock.model import IgnoreList, Inventory
 from authzlock.render import (
@@ -236,8 +238,11 @@ def _load_lockfile(path: Path) -> Inventory:
         raise LockfileError(f"{path}: {exc}") from exc
 
 
-def _write_if_changed(path: Path, text: str) -> bool:
-    """Write `text` to `path` unless it already holds exactly that; True if written."""
+def _write_if_changed(path: Path, text: str, *, option: str = "--lockfile") -> bool:
+    """Write `text` to `path` unless it already holds exactly that; True if written.
+
+    `option` is the flag the error hint suggests for choosing another path.
+    """
     data = text.encode("utf-8")
     try:
         if path.is_file() and path.read_bytes() == data:
@@ -248,7 +253,7 @@ def _write_if_changed(path: Path, text: str) -> bool:
         reason = exc.strerror or type(exc).__name__
         raise LockfileError(
             f"cannot write {path}: {reason}.\n"
-            "Check that the directory is writable, or pass --lockfile with another path."
+            f"Check that the directory is writable, or pass {option} with another path."
         ) from exc
     return True
 
@@ -413,3 +418,36 @@ def diff(
         failed = not report.diff.is_empty
     if failed:
         raise typer.Exit(EXIT_MISMATCH)
+
+
+@app.command("gen-tests")
+def gen_tests(
+    ctx: typer.Context,
+    lockfile_path: LockfileOption = DEFAULT_LOCKFILE,
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            metavar="PATH",
+            help="Path of the generated pytest module, relative to the current directory.",
+            dir_okay=False,
+        ),
+    ] = Path(DEFAULT_TESTS_OUTPUT),
+    quiet: QuietOption = False,
+) -> None:
+    """Write pytest tests asserting that anonymous requests to protected routes are refused.
+
+    Reads only the lockfile; the project is loaded when the generated tests run.
+    """
+    options = _options_or_exit(ctx, None, lockfile_path)
+    try:
+        inventory = _load_lockfile(options.lockfile)
+        text, summary = generate_tests(
+            inventory.routes, lockfile=options.lockfile.as_posix(), output=output.as_posix()
+        )
+        written = _write_if_changed(output, text, option="--output")
+    except LockfileError as exc:
+        _fail(exc)
+    if quiet:
+        return
+    typer.echo(f"{output}: {summary}" if written else f"{output}: unchanged ({summary})")

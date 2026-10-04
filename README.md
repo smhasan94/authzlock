@@ -247,7 +247,10 @@ configuration import under `additional_dependencies`, pinned like your project. 
   `IsOwner` is recorded by name with its docstring; its code is never run or judged.
 - It does not do black-box testing of a running app. It reads code and settings, sends no
   HTTP requests and needs no users, roles file or seeded data.
-- It does not generate tests from the lockfile.
+- It does not generate tests for logged-in users. `authzlock gen-tests` writes pytest
+  checks from the lockfile that anonymous requests to protected routes are refused, using
+  Django's test client in-process; routes it cannot reason about get a skipped test that
+  says why.
 
 Some of what it records comes from a heuristic, and the lockfile names it as such.
 `dynamic` means the view overrides `get_permissions()` and the classes are only known at
