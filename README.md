@@ -251,7 +251,7 @@ to `.pre-commit-config.yaml` and run `pre-commit install`:
 ```yaml
 repos:
   - repo: https://github.com/smhasan94/authzlock
-    rev: v0.2.0
+    rev: v0.3.0
     hooks:
       - id: authzlock-check
         args: ["--settings", "mysite.settings"]

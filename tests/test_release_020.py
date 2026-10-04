@@ -1,4 +1,4 @@
-"""Tests for the 0.2.0 release: the changelog section and the pre-commit revs."""
+"""Tests for the 0.2.0 release's changelog section, and the pre-commit rev in the install docs."""
 
 from __future__ import annotations
 
@@ -31,7 +31,10 @@ def test_changelog_020_section_complete(repo_root: Path) -> None:
         assert item in released, item
 
 
-def test_install_docs_name_the_020_pre_commit_rev(repo_root: Path) -> None:
+def test_install_docs_name_the_current_release_as_pre_commit_rev(repo_root: Path) -> None:
+    init = (repo_root / "src" / "authzlock" / "__init__.py").read_text(encoding="utf-8")
+    version = re.search(r'__version__ = "([^"]+)"', init)
+    assert version
     for page in ("README.md", "docs/pre-commit.md"):
         text = (repo_root / page).read_text(encoding="utf-8")
-        assert re.findall(r"rev: (v\d+\.\d+\.\d+)", text) == ["v0.2.0"], page
+        assert re.findall(r"rev: (v\d+\.\d+\.\d+)", text) == [f"v{version.group(1)}"], page

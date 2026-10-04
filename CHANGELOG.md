@@ -6,6 +6,8 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-04
+
 ### Added
 
 - The GitHub Action takes an `app` input for FastAPI apps, and `settings-module` is now
