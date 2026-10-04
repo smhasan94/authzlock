@@ -1,0 +1,169 @@
+schema_version: 1
+routes:
+- path: /admin/reports/{report_id}
+  name: admin-report
+  view: main.get_report
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - main.get_current_user
+  - main.get_db
+  - main.require_admin
+  permission_source: dependency
+  authentication_classes:
+  - fastapi.security.oauth2.OAuth2PasswordBearer
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /admin/users
+  name: list_users
+  view: main.list_users
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - main.get_current_user
+  - main.require_admin
+  permission_source: dependency
+  authentication_classes:
+  - fastapi.security.oauth2.OAuth2PasswordBearer
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /items
+  name: create_item
+  view: main.create_item
+  methods:
+  - POST
+  actions: {}
+  permission_classes:
+  - main.get_current_user
+  - main.get_db
+  permission_source: dependency
+  authentication_classes:
+  - fastapi.security.oauth2.OAuth2PasswordBearer
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /items
+  name: list_items
+  view: main.list_items
+  methods:
+  - GET
+  actions: {}
+  permission_classes:
+  - main.CommonParams
+  permission_source: dependency
+  authentication_classes: []
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /items/{item_id}
+  name: delete_item
+  view: main.delete_item
+  methods:
+  - DELETE
+  actions: {}
+  permission_classes:
+  - main.get_current_user[items:write]
+  permission_source: dependency
+  authentication_classes:
+  - fastapi.security.oauth2.OAuth2PasswordBearer
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /legacy/status
+  name: legacy:legacy_status
+  view: main.legacy_status
+  methods:
+  - GET
+  actions: {}
+  permission_classes: []
+  permission_source: dependency
+  authentication_classes: []
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /search
+  name: search
+  view: main.search
+  methods:
+  - GET
+  - POST
+  actions: {}
+  permission_classes:
+  - main.Exploding
+  permission_source: dependency
+  authentication_classes: []
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /static
+  name: static
+  view: starlette.staticfiles.StaticFiles
+  methods:
+  - any
+  actions: {}
+  permission_classes: dynamic
+  permission_source: dependency
+  authentication_classes: dynamic
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /token-info
+  name: token_info
+  view: main.token_info
+  methods:
+  - GET
+  actions: {}
+  permission_classes: []
+  permission_source: dependency
+  authentication_classes:
+  - fastapi.security.http.HTTPBearer
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+- path: /ws
+  name: feed
+  view: main.feed
+  methods:
+  - WEBSOCKET
+  actions: {}
+  permission_classes: []
+  permission_source: dependency
+  authentication_classes: []
+  authentication_source: dependency
+  django_auth: null
+  object_scoping: null
+custom_permissions:
+  main.CommonParams:
+    docstring: Paging parameters shared by list endpoints.
+    name: CommonParams
+    used_by:
+    - GET /items -> main.list_items
+  main.Exploding:
+    docstring: Raises when called, so a test can prove extraction never calls a dependency.
+    name: Exploding
+    used_by:
+    - GET,POST /search -> main.search
+  main.get_current_user:
+    docstring: Resolve the user the bearer token belongs to.
+    name: get_current_user
+    used_by:
+    - DELETE /items/{item_id} -> main.delete_item
+    - GET /admin/reports/{report_id} -> main.get_report
+    - GET /admin/users -> main.list_users
+    - POST /items -> main.create_item
+  main.get_db:
+    docstring: null
+    name: get_db
+    used_by:
+    - GET /admin/reports/{report_id} -> main.get_report
+    - POST /items -> main.create_item
+  main.require_admin:
+    docstring: Allow only administrators.
+    name: require_admin
+    used_by:
+    - GET /admin/reports/{report_id} -> main.get_report
+    - GET /admin/users -> main.list_users

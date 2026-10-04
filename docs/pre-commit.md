@@ -39,7 +39,8 @@ it in one of two ways:
 - `DJANGO_SETTINGS_MODULE` set in the environment that runs `git commit`. Leave out `args`
   in that case.
 
-Without either, the hook fails with `No Django settings module given.`
+Without either, the hook fails with `No Django settings module or FastAPI app given.`
+For a FastAPI app, pass `args: ["--app", "main:app"]` or set `AUTHZLOCK_APP` instead.
 
 pre-commit runs the hooks from the repository root, and authzlock puts the current
 directory first on the import path, as `manage.py` does. A settings module in the

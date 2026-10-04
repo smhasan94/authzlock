@@ -1,4 +1,4 @@
-"""authzlock: an authorization lockfile for Django and Django REST Framework."""
+"""authzlock: an authorization lockfile for Django, Django REST Framework and FastAPI."""
 
 __version__ = "0.1.0"
 

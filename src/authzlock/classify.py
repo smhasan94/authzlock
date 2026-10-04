@@ -1,8 +1,11 @@
 """Classification of route changes: loosened, tightened, changed-unknown or equivalent.
 
-Rules R1 to R8 (agreed 2026-09-29, recorded on epic SHA-177) and R9 (SHA-239) are evaluated
-in `RULES` order and the first rule that returns a `Classification` wins; R8 always matches.
-R9 runs first: for `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly`,
+Rules R1 to R8 (agreed 2026-09-29, recorded on epic SHA-177), R9 (SHA-239) and R10
+(SHA-243) are evaluated in `RULES` order and the first rule that returns a `Classification`
+wins; R8 always matches. R10 runs first and covers FastAPI routes, whose
+`permission_source` is `dependency`: a dependency is only a name, so a changed dependency
+list is never ranked, and only losing or gaining every security scheme is labelled. R9 runs
+next: for `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly`,
 whose meaning depends on the HTTP method, it classifies each method's effective permissions
 with R1 to R8 and reports the worst result, or `equivalent` when no method changed. Every
 result names its rule and gives a one-line reason that starts with the rule id.
@@ -38,6 +41,7 @@ LABELS: tuple[Label, ...] = (
 )
 
 DYNAMIC = "dynamic"
+DEPENDENCY = "dependency"
 
 # DRF built-ins from weakest to strongest. A permission list is an AND, and each class
 # implies every class ranked below it, so a list of ranked classes is as strong as its
@@ -382,6 +386,39 @@ def _r9_per_method(change: RouteChange) -> Classification | None:
     )
 
 
+def _r10_dependency(change: RouteChange) -> Classification | None:
+    if DEPENDENCY not in (change.base.permission_source, change.current.permission_source):
+        return None
+    changed = _changed(change)
+    perm = changed.get("permission_classes")
+    if perm is not None:
+        return Classification(
+            "changed-unknown",
+            "R10",
+            f"R10: dependencies changed, and dependencies are not ranked "
+            f"({_show(perm.old)} -> {_show(perm.new)})",
+        )
+    auth = changed.get("authentication_classes")
+    if auth is None:
+        return None
+    if set(changed) == {"authentication_classes"} and (
+        isinstance(auth.old, tuple) and isinstance(auth.new, tuple)
+    ):
+        if auth.old and not auth.new:
+            return Classification(
+                "loosened", "R10", f"R10: every security scheme removed ({_show(auth.old)})"
+            )
+        if auth.new and not auth.old:
+            return Classification(
+                "tightened", "R10", f"R10: security scheme added ({_show(auth.new)})"
+            )
+    return Classification(
+        "changed-unknown",
+        "R10",
+        f"R10: security schemes changed ({_show(auth.old)} -> {_show(auth.new)})",
+    )
+
+
 # Per-method labels from most to least severe, for R9 to pick the route's label.
 _SEVERITY: tuple[Label, ...] = ("loosened", "changed-unknown", "tightened")
 
@@ -417,6 +454,13 @@ MVP_RULES: tuple[Rule, ...] = (
 )
 
 RULES: tuple[Rule, ...] = (
+    Rule(
+        "R10",
+        "FastAPI dependency routes: a changed dependency list is changed-unknown; every "
+        "security scheme removed is loosened, the first one added is tightened, with nothing "
+        "else changed.",
+        _r10_dependency,
+    ),
     Rule(
         "R9",
         "IsAuthenticatedOrReadOnly or DjangoModelPermissionsOrAnonReadOnly on either side: "

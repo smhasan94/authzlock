@@ -122,13 +122,16 @@ Keys always appear in this order.
   (composed permissions as expressions such as `(a.IsAuthenticated | b.IsOwner)` or
   `(~b.IsBlocked)`), the
   string `dynamic` when the view overrides `get_permissions` and authzlock will not guess,
-  or `null` for views that are not DRF views.
+  or `null` for views that are not DRF views. For a FastAPI route it lists the route's
+  dependencies by dotted path, `Security` scopes as `path[scope]`.
 - `permission_source`: `view` when the view or one of its base classes sets the classes
   (or overrides `get_permissions`), `action` when an `@action` sets its own
   `permission_classes`, `settings-default` when they come from
-  `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`, `null` for non-DRF views.
+  `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`, `dependency` for every FastAPI route,
+  `null` for non-DRF views.
 - `authentication_classes`: like `permission_classes`, for authentication, with `dynamic`
-  when the view overrides `get_authenticators`.
+  when the view overrides `get_authenticators`. For a FastAPI route, the class paths of the
+  security schemes in its dependency tree.
 - `authentication_source`: like `permission_source`, for authentication.
 - `django_auth`: for plain Django views, the rules set by decorators and mixins:
   `login_required`, `permission_required` (sorted permission strings), `user_passes_test`

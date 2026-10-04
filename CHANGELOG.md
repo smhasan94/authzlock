@@ -23,8 +23,19 @@ All notable changes to authzlock are recorded here. The format follows
 - Rule R9 judges `IsAuthenticatedOrReadOnly` and `DjangoModelPermissionsOrAnonReadOnly` per
   HTTP method, and the new label `equivalent` marks a permission change that no method's
   effective rule notices. See `docs/classification.md`.
+- FastAPI support: `update`, `check` and `diff` read a FastAPI app named by `--app
+  MODULE:ATTR`, `AUTHZLOCK_APP` or `app` in `[tool.authzlock]`, without calling any of its
+  code. Each route's dependencies are recorded in `permission_classes` and its security
+  schemes in `authentication_classes`, with `permission_source: dependency`; the lockfile
+  schema is unchanged. `--framework auto|django|fastapi` chooses between the two kinds of
+  project. Rule R10 labels FastAPI route changes: a changed dependency list is
+  `changed-unknown`, and removing every security scheme is `loosened`. `gen-tests` refuses
+  FastAPI lockfiles. See the README and `docs/heuristics-and-limits.md`.
 
 ### Changed
+
+- With neither a settings module nor an app given, the error now reads `No Django settings
+  module or FastAPI app given.` instead of `No Django settings module given.`
 
 - The `diff` summary line has a sixth count, `equivalent`, at the end:
   `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent`. The JSON

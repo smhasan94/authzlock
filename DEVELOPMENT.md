@@ -123,6 +123,12 @@ Tests against the oldest supported DRF (3.14, on Python 3.12 and Django 4.2):
 nox -s tests_min_drf
 ```
 
+Tests against the oldest supported FastAPI (0.100, on Python 3.12 and Django 5.2):
+
+```sh
+nox -s tests_min_fastapi
+```
+
 Run everything CI runs:
 
 ```sh

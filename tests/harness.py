@@ -2,6 +2,8 @@
 
 Django can only be set up once per process, so every call starts a fresh interpreter with
 `PYTHONPATH` pointing at `tests/fixtures/<fixture>` and `DJANGO_SETTINGS_MODULE=settings`.
+A fixture with `main.py` and no `settings.py` is a FastAPI project and gets
+`AUTHZLOCK_APP=main:app` instead.
 """
 
 from __future__ import annotations
@@ -27,12 +29,27 @@ runpy.run_module("authzlock._dump", run_name="__main__", alter_sys=True)
 """
 
 
+def project_vars(project: Path) -> dict[str, str | None]:
+    """The variables that name the project in `project`: `AUTHZLOCK_APP` for a FastAPI
+    project (`main.py` without `settings.py`), `DJANGO_SETTINGS_MODULE` otherwise. The other
+    one is None, meaning unset."""
+    if not (project / "settings.py").exists() and (project / "main.py").exists():
+        return {"AUTHZLOCK_APP": "main:app", "DJANGO_SETTINGS_MODULE": None}
+    return {"DJANGO_SETTINGS_MODULE": "settings", "AUTHZLOCK_APP": None}
+
+
 def fixture_env(fixture: str) -> dict[str, str]:
-    """Environment that makes `fixture` the Django project for a child process."""
+    """Environment that makes `fixture` the project for a child process."""
     path = FIXTURES / fixture
     if not path.is_dir():
         raise ValueError(f"no fixture project named {fixture!r} in {FIXTURES}")
-    return {**os.environ, "PYTHONPATH": str(path), "DJANGO_SETTINGS_MODULE": "settings"}
+    env = {**os.environ, "PYTHONPATH": str(path)}
+    for key, value in project_vars(path).items():
+        if value is None:
+            env.pop(key, None)
+        else:
+            env[key] = value
+    return env
 
 
 def run_dump(
@@ -127,8 +144,8 @@ def init_repo(repo: Path) -> Path:
 
 
 def project_env(repo: Path) -> dict[str, str | None]:
-    """`run_cli` environment that makes the project copied into `repo` the Django project."""
-    return {**GIT_ENV, "PYTHONPATH": str(repo), "DJANGO_SETTINGS_MODULE": "settings"}
+    """`run_cli` environment that makes the project copied into `repo` the project."""
+    return {**GIT_ENV, "PYTHONPATH": str(repo), **project_vars(repo)}
 
 
 def make_repo(fixture: str, tmp_path: Path, *, lockfile: str | None = "authz.lock") -> Path:

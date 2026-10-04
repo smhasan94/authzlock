@@ -42,7 +42,13 @@ def _matrix_cells(job: dict[str, Any]) -> set[tuple[str, str]]:
 def test_t4_nox_default_sessions_run_everything_ci_runs(
     noxfile: ModuleType, workflow: dict[str, Any]
 ) -> None:
-    assert noxfile.nox.options.sessions == ["lint", "typecheck", "tests", "tests_min_drf"]
+    assert noxfile.nox.options.sessions == [
+        "lint",
+        "typecheck",
+        "tests",
+        "tests_min_drf",
+        "tests_min_fastapi",
+    ]
     assert set(noxfile.nox.options.sessions) == set(workflow["jobs"])
 
 
@@ -71,3 +77,12 @@ def test_extra_ci_has_min_drf_job(workflow: dict[str, Any]) -> None:
     ]
     assert pythons == ["3.12"]
     assert any(step.get("run") == "nox -s tests_min_drf" for step in steps)
+
+
+def test_extra_ci_has_min_fastapi_job(workflow: dict[str, Any]) -> None:
+    steps = workflow["jobs"]["tests_min_fastapi"]["steps"]
+    pythons = [
+        step["with"]["python-version"] for step in steps if "setup-python" in step.get("uses", "")
+    ]
+    assert pythons == ["3.12"]
+    assert any(step.get("run") == "nox -s tests_min_fastapi" for step in steps)

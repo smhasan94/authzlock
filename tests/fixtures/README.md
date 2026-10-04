@@ -1,7 +1,9 @@
 # Fixture Django projects
 
 Each directory here is a small, self-contained Django project used to test extraction,
-one per view style. The directory name is the style it covers, in snake case, for example
+one per view style. `fastapi_basic` is the one FastAPI app: a `main.py` holding `app`
+and no `settings.py`, for which the harness sets `AUTHZLOCK_APP=main:app` instead of
+`DJANGO_SETTINGS_MODULE`. The directory name is the style it covers, in snake case, for example
 `function_views`, `class_views`, `drf_apiview`, `drf_viewsets`, `scenario_loosen`.
 
 ## Layout
@@ -30,7 +32,7 @@ The named modules are made unimportable in the child process before extraction s
 
 ## Golden lockfiles
 
-`class_views`, `drf_apiview`, `drf_viewsets`, `function_views` and `scenario_loosen` each hold
+`class_views`, `drf_apiview`, `drf_viewsets`, `fastapi_basic`, `function_views` and `scenario_loosen` each hold
 `authz.lock.expected`, the exact bytes `authzlock update` must write for that project.
 `tests/test_determinism.py` (T5) compares with it in every nox cell. Where a Django or DRF
 release genuinely builds different routes, a version-specific file takes precedence:
@@ -86,6 +88,14 @@ The output blocks in `docs/scenario.md` are generated from `scenario_loosen` the
   `permission_classes = [IsAuthenticated, IsOwner]`, the documented custom `IsOwner`, and an
   unused custom `IsTenantAdmin` that a test swaps in. The scenario's edit removes `, IsOwner`
   from that one line of `billing/views.py`; keep the line as it is.
+- `fastapi_basic`: a FastAPI app with an `OAuth2PasswordBearer` scheme, `get_current_user`
+  depending on it, `get_db` without a docstring, `require_admin` nested on
+  `get_current_user`, a class dependency `CommonParams`, an `Exploding` dependency that
+  raises if called, a `Security` dependency with a scope, an `api_route` with GET and POST,
+  an `HTTPBearer` route, a WebSocket route, an `/admin` router with a router-level
+  dependency and a nested `/reports` router, a FastAPI sub-app mounted at `/legacy` and
+  `StaticFiles` mounted at `/static`. The docs routes are turned off so the golden file does
+  not depend on how a FastAPI release names them.
 - `minimal`: a single view; used to prove fixtures run in separate processes.
 - `broken`: a `settings.py` that raises at import time; used to test error reporting. It is
   not a complete project.
