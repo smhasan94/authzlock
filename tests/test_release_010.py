@@ -50,9 +50,12 @@ def test_t5_changelog_010_section_complete(repo_root: Path) -> None:
         assert item in released, item
 
 
-def test_extra_version_is_010(repo_root: Path) -> None:
+def test_extra_version_is_the_newest_changelog_release(repo_root: Path) -> None:
+    changelog = (repo_root / "CHANGELOG.md").read_text(encoding="utf-8")
+    newest = re.search(r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$", changelog, re.M)
+    assert newest, "CHANGELOG.md has no dated release"
     text = (repo_root / "src" / "authzlock" / "__init__.py").read_text(encoding="utf-8")
-    assert '__version__ = "0.1.0"' in text
+    assert f'__version__ = "{newest.group(1)}"' in text
 
 
 # T4 ---------------------------------------------------------------------------------------

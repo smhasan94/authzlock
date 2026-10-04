@@ -20,7 +20,7 @@ Add this to `.pre-commit-config.yaml` at the root of your Django project and run
 ```yaml
 repos:
   - repo: https://github.com/smhasan94/authzlock
-    rev: v0.1.0  # use the latest release tag
+    rev: v0.2.0  # use the latest release tag
     hooks:
       - id: authzlock-check
         args: ["--settings", "mysite.settings"]

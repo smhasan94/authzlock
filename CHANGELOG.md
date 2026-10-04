@@ -6,6 +6,8 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-04
+
 ### Added
 
 - `[tool.authzlock]` in `pyproject.toml` sets `settings`, `lockfile` and `fail_on` for
@@ -36,11 +38,11 @@ All notable changes to authzlock are recorded here. The format follows
 
 - With neither a settings module nor an app given, the error now reads `No Django settings
   module or FastAPI app given.` instead of `No Django settings module given.`
-
 - The `diff` summary line has a sixth count, `equivalent`, at the end:
   `1 loosened, 0 tightened, 0 added, 0 removed, 0 changed-unknown, 0 equivalent`. The JSON
   document gains `summary.equivalent` and the label, and SARIF a rule of level `note`. The
-  GitHub Action's `summary` output changes the same way once `v1` points at this release.
+  `v1` Action tag moves to this release, so the Action's `summary` output and pull request
+  comment gain the same count for every workflow that uses `smhasan94/authzlock@v1`.
 
 ## [0.1.0] - 2026-10-02
 
