@@ -6,6 +6,11 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The README is shorter and simpler. The full classification rule table now lives only in
+  `docs/classification.md`; the README lists the six labels and links there.
+
 ## [0.3.0] - 2026-10-04
 
 ### Added

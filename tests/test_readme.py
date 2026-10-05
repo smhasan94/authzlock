@@ -15,13 +15,14 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 import yaml
 from typer.main import get_command
 
 from authzlock import lockfile
+from authzlock.classify import RULES, Label
 from authzlock.cli import app
 from authzlock.errors import EXIT_OK
 from harness import FIXTURES, GIT_ENV, make_repo
@@ -172,17 +173,17 @@ def test_t2_lockfile_excerpt_loads() -> None:
 RULE_ROW = re.compile(r"^\| (R\d+) \|.*\|$", re.MULTILINE)
 
 
-def test_t3_classification_rules_match_docs() -> None:
+def test_t3_readme_names_every_label_and_links_the_rules() -> None:
     docs = (REPO_ROOT / "docs" / "classification.md").read_text(encoding="utf-8")
     readme = _readme()
+    section = _section(readme, "How changes are labelled")
 
-    readme_ids = set(RULE_ROW.findall(readme))
-    assert readme_ids == set(RULE_ROW.findall(docs))
-    assert {f"R{n}" for n in range(1, 9)} <= readme_ids
-    # The table is a verbatim copy, so every row matches too.
-    doc_rows = [m.group(0) for m in RULE_ROW.finditer(docs)]
-    readme_rows = [m.group(0) for m in RULE_ROW.finditer(readme)]
-    assert readme_rows == doc_rows
+    # The rule table lives in docs/classification.md only (SHA-326); the README summarises.
+    assert RULE_ROW.findall(docs) == [rule.id for rule in RULES]
+    assert RULE_ROW.findall(readme) == []
+    assert "](docs/classification.md)" in section
+    missing = [label for label in get_args(Label) if f"`{label}`" not in section]
+    assert missing == [], f"README label list is missing {missing}"
 
 
 # T4 ---------------------------------------------------------------------------------------

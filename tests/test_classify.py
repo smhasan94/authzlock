@@ -547,13 +547,13 @@ def _rule_ids(text: str) -> list[str]:
     return re.findall(r"^\|\s*(R\d+)\s*\|", text, flags=re.MULTILINE)
 
 
-def test_t10_docs_and_readme_list_r9_and_equivalent() -> None:
+def test_t10_docs_list_r9_and_equivalent() -> None:
+    # The README no longer copies the rule table (SHA-326); tests/test_readme.py T3 checks
+    # that it names `equivalent` and links to docs/classification.md.
     docs = (REPO_ROOT / "docs" / "classification.md").read_text(encoding="utf-8")
-    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert _rule_ids(docs) == _rule_ids(readme) == [rule.id for rule in RULES]
-    for text in (docs, readme):
-        r9 = next(line for line in text.splitlines() if line.startswith("| R9 |"))
-        assert "`equivalent`" in r9
-        assert "IsAuthenticatedOrReadOnly" in r9
-        assert "DjangoModelPermissionsOrAnonReadOnly" in r9
+    assert _rule_ids(docs) == [rule.id for rule in RULES]
+    r9 = next(line for line in docs.splitlines() if line.startswith("| R9 |"))
+    assert "`equivalent`" in r9
+    assert "IsAuthenticatedOrReadOnly" in r9
+    assert "DjangoModelPermissionsOrAnonReadOnly" in r9
