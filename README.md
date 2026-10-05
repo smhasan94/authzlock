@@ -162,7 +162,7 @@ settings and URLs import under `additional_dependencies`:
 ```yaml
 repos:
   - repo: https://github.com/smhasan94/authzlock
-    rev: v0.3.0
+    rev: v0.3.1
     hooks:
       - id: authzlock-check
         args: ["--settings", "mysite.settings"]

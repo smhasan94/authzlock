@@ -14,7 +14,7 @@ runs on the same tree print the same bytes, and no value contains an absolute pa
 ```json
 {
   "schema_version": 1,
-  "tool": {"name": "authzlock", "version": "0.3.0"},
+  "tool": {"name": "authzlock", "version": "0.3.1"},
   "base": {"ref": "origin/main", "lockfile": "authz.lock", "lockfile_found": true},
   "ignore": {"base": {"paths": [], "views": []}, "current": {"paths": [], "views": []},
              "changed": false},
