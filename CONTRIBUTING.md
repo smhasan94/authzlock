@@ -73,9 +73,14 @@ nox
 ```
 
 Session names are defined in `noxfile.py`. CI runs the same sessions on every pull request:
-`lint`, `typecheck`, eleven `tests (python=X, django=Y)` cells and the DRF 3.14 cell, plus
-the GitHub Action end-to-end jobs described in
-[docs/github-action.md](docs/github-action.md#testing-the-action).
+`lint`, `typecheck`, one `tests (python=X, django=Y)` job per cell of the README
+compatibility table, and the oldest-DRF and oldest-FastAPI jobs, plus the GitHub Action
+end-to-end jobs described in [docs/github-action.md](docs/github-action.md#testing-the-action).
+
+`lint`, `typecheck` and every `tests (...)` job are required checks on `main` (ruleset
+`protect-main`). The check names include the matrix values, so when a Python or Django
+version is added or dropped, update the ruleset in the same change or pull requests will
+wait for a check that never runs.
 
 ## Branches, commits and pull requests
 
