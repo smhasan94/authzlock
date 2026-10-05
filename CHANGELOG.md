@@ -6,6 +6,8 @@ All notable changes to authzlock are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-05
+
 ### Changed
 
 - The README is shorter and simpler. The full classification rule table now lives only in
